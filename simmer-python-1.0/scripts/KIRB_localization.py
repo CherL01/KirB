@@ -1,26 +1,3 @@
-# '''
-# This file is part of SimMeR, an educational mechatronics robotics simulator.
-# Initial development funded by the University of Toronto MIE Department.
-# Copyright (C) 2023  Ian G. Bennett
-
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published
-# by the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-# '''
-
-# # Basic echo client, for testing purposes
-# # Code modified from examples on https://realpython.com/python-sockets/
-# # and https://www.geeksforgeeks.org/python-display-text-to-pygame-window/
-
 import socket
 import struct
 import time
@@ -29,60 +6,6 @@ from threading import Thread
 import _thread
 from datetime import datetime
 import numpy as np
-
-# def transmit(data):
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#         try:
-#             s.connect((HOST, PORT_TX))
-#             s.send(data.encode('utf-8'))
-#         except (ConnectionRefusedError, ConnectionResetError):
-#             print('Tx Connection was refused or reset.')
-#             _thread.interrupt_main()
-#         except TimeoutError:
-#             print('Tx socket timed out.')
-#             _thread.interrupt_main()
-#         except EOFError:
-#             print('\nKeyboardInterrupt triggered. Closing...')
-#             _thread.interrupt_main()
-
-# def receive():
-#     global responses
-#     global time_rx
-#     while True:
-#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
-#             try:
-#                 s2.connect((HOST, PORT_RX))
-#                 response_raw = s2.recv(1024)
-#                 if response_raw:
-#                     responses = bytes_to_list(response_raw)
-#                     time_rx = datetime.now().strftime("%H:%M:%S")
-#             except (ConnectionRefusedError, ConnectionResetError):
-#                 print('Rx connection was refused or reset.')
-#                 _thread.interrupt_main()
-#             except TimeoutError:
-#                 print('Response not received from robot.')
-#                 _thread.interrupt_main()
-
-# def bytes_to_list(msg):
-#     num_responses = int(len(msg)/8)
-#     data = struct.unpack("%sd" % str(num_responses), msg)
-#     return data
-
-
-# ### Network Setup ###
-# HOST = '127.0.0.1'  # The server's hostname or IP address
-# PORT_TX = 61200     # The port used by the *CLIENT* to receive
-# PORT_RX = 61201     # The port used by the *CLIENT* to send data
-
-# # Received responses
-# responses = [False]
-# time_rx = 'Never'
-
-# # Create tx and rx threads
-# Thread(target = receive, daemon = True).start()
-
-# # Run the sequence of commands
-# RUNNING = True
 
 # maze labels
 maze_labels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
@@ -104,228 +27,96 @@ for l, c in zip(maze_labels, wall_configs):
 class mazeLocalization():
 
     # initialize maze coordinates
-    def __init__(self, mazeLabels, mazeConfigs, mazeMap):
+    def __init__(self, mazeLabels, wallConfigs, mazeMap):
         self.mazeLabels = mazeLabels
-        self.mazeConfigs = mazeConfigs
+        self.wallConfigs = wallConfigs
         self.mazeMap = mazeMap
 
     # get potential locations of current square
-    def get_location(self, front=False, left=False, back=False, right=False):
+    def get_location(self, front=False, left=False, back=False, right=False, neighbouring_squares=None):
         '''
         input: wall readings (True = wall, False = no wall)
         output: list of potential locations in maze (ie. A1)
         '''
+        # put wall readings in list to check wall configuration
+        # organized in counterclockwise direction starting from front
         orientations = [front, left, back, right]
         wall_config = None
 
-        print(orientations)
+        # print('get_location function - orientation: ', orientations)
 
+        # True = wall in reading 
         if True in orientations:
+            # sum of 1 = one wall in reading
             if sum(orientations) == 1:
                 wall_config = 1
+            # sum of 2 = 2 walls in reading
             elif sum(orientations) == 2:
                 indices = [i+1 for i, x in enumerate(orientations) if x == True]
+                # if sum is even then walls are opposite
                 if sum(indices) % 2 == 1:
                     wall_config = 2
+                # if sum is odd then walls are adjacent
                 else: 
                     wall_config = 3
+            # sum of 3 = 3 walls in reading
             else:
                 wall_config = 4
+        # False = no walls in reading
         else:
             wall_config = 0
 
-        print(wall_config)
+        # print('get_location function - wall_config: ', wall_config)
+
+        # find all squares in map that have wall configuration
         self.current_location = [k for k, v in self.mazeMap.items() if v == wall_config]
+
+        # if neighbouring square is given and not in list, remove potential location
+        if neighbouring_squares != None:
+            for square in neighbouring_squares[0]:
+                for pot_loc in self.current_location:
+                    if square not in self.neighbours(pot_loc):
+                        self.current_location.remove(pot_loc)
 
         return self.current_location
 
+    def neighbours(self, pot_loc):
+        '''
+        input: list of potential locations
+        return: list of neighbouring squares
+        '''
+        # get coordinate of potential location
+        for row in self.mazeLabels:
+            if pot_loc in row:
+                y, x = self.mazeLabels.index(row), row.index(pot_loc)
+
+        # find neighbouring squares
+        neighbouring_squares = [self.mazeLabels[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.mazeLabels)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.mazeLabels[0])-1 else x + 1)]
+        # find neighbouring square wall configurations
+        neighbouring_square_wall_configs = [self.wallConfigs[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.wallConfigs)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.wallConfigs[0])-1 else x + 1)]
+
+        # find index of potential location in neighbouring squares
+        pot_loc_index = neighbouring_squares.index(pot_loc)
+        
+        # remove potential location
+        neighbouring_squares.pop(pot_loc_index)
+        neighbouring_square_wall_configs.pop(pot_loc_index)
+        
+        return neighbouring_squares, neighbouring_square_wall_configs
+
+##############################################################################################
 
 # testing
-test_wall_config1 = [False, False, True, False]
+current_test_wall_config = [False, True, True, True]
+front_test_wall_config1 = [False, True, False, True]
 
 Loc = mazeLocalization(maze_labels, wall_configs, maze_map)
-print(Loc.get_location(*test_wall_config1))
-
-
-        
-
-# #initialize sensors
-# frontSensor = 0
-# leftFrontSensor = 0
-# leftBackSensor = 0
-# rightFrontSensor = 0
-# rightBackSensor = 0
-
-# #initialize sensor difference and limit
-# leftSensorDifference = 0
-# rightSensorDifference = 0
-# sensorDifferenceLimit = 0.15
-# eStopLimit = 1.25
-
-# #start by rotating 90 degrees (test)
-# transmit('r0-90')
-
-# while RUNNING:
-    
-#     # check front sensor
-#     transmit('u0')
-#     time.sleep(0.08)
-#     print(f"Ultrasonic FRONT reading: {round(responses[0], 3)}")
-#     frontSensor = responses[0]
-    
-#     if frontSensor < eStopLimit:
-#         RUNNING = False
-#         print("Emergency stop!")
-#         transmit('xx')
-#         break
-    
-#     # check left front sensor
-#     transmit('u1')
-#     time.sleep(0.08)
-#     print(f"Ultrasonic FRONT-LEFT reading: {round(responses[0], 3)}")
-#     leftFrontSensor = responses[0]
-
-#     # check left back sensor
-#     transmit('u2')
-#     time.sleep(0.08)
-#     print(f"Ultrasonic BACK-LEFT reading: {round(responses[0], 3)}")
-#     leftBackSensor = responses[0]
-    
-#     # check right front sensor
-#     transmit('u3')
-#     time.sleep(0.08)
-#     print(f"Ultrasonic FRONT-RIGHT reading: {round(responses[0], 3)}")
-#     rightFrontSensor = responses[0]
-
-#     # check right back sensor
-#     transmit('u4')
-#     time.sleep(0.08)
-#     print(f"Ultrasonic BACK-RIGHT reading: {round(responses[0], 3)}")
-#     rightBackSensor = responses[0]
-    
-#     if leftBackSensor<eStopLimit or leftFrontSensor<eStopLimit or rightBackSensor<eStopLimit or rightFrontSensor<eStopLimit:
-#         RUNNING = False
-#         print("Emergency stop!")
-#         transmit('xx')
-#         break    
-    
-#     # find difference between left sensors
-#     leftSensorDifference = abs(leftFrontSensor-leftBackSensor)
-#     # find difference between right sensors
-#     rightSensorDifference = abs(rightFrontSensor-rightBackSensor)
-    
-#     sensorList = [leftFrontSensor, leftBackSensor, rightFrontSensor, rightBackSensor]
-    
-#     # ROVER IS NOT PARALLEL
-#     if leftSensorDifference>sensorDifferenceLimit or rightSensorDifference>sensorDifferenceLimit:
-    
-#         # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
-#         if leftSensorDifference>sensorDifferenceLimit and rightSensorDifference>sensorDifferenceLimit:
-            
-#             # CONDITION #1: 45deg placement
-            
-#             closest = sensorList.index(min(sensorList))
-            
-#             # TURN 4 DEG WHEN NOT ALIGNED
-            
-#             # front left is closest
-#             if closest==0:
-#                 transmit('r0-4')
-#                 time.sleep(0.08)
-#                 #print("")
-#             # back left is closest
-#             elif closest==1:
-#                 transmit('r0--4')
-#                 time.sleep(0.08)
-#                 #print("")
-#             # front right is closest
-#             elif closest==2:
-#                 transmit('r0--4')
-#                 time.sleep(0.08)
-#                 #print("")
-#             # back right is closest
-#             elif closest==3:
-#                 transmit('r0-4')
-#                 time.sleep(0.08)
-#                 #print("")
-            
-#             # CONDITION #2: 3-way/4-way intersection (NOT AT WALL YET)
-#             if frontSensor>=2.5:
-#                 transmit('w0-1')
-#                 time.sleep(0.08)
-
-#             # CONDITION #3: 3-way/4-way intersection (AT THE WALL)
-#             elif frontSensor<2.5:
-                
-#                 # 3 way intersection
-#                     # if this localizing, turn toward closest side
-#                     # if this is dropping block off at B site, turn towards B site specified
-                    
-#                 # 4 way interestion
-#                     # idk yet depends on where its going
-                    
-#                 #placeholder move back 1 inch
-#                 transmit('w0--1')
-#                 time.sleep(0.08)
-
-    
-#         # LEFT SIDE IS NOT PARALLEL
-#         elif leftSensorDifference > sensorDifferenceLimit and rightSensorDifference < sensorDifferenceLimit:
-#             print("Left side not parallel...")
-            
-#             #if 
-#             if frontSensor >= 2.25:
-#                 # move forward 1 inch
-#                 transmit('w0-1')
-#                 time.sleep(0.08)
-            
-#             # rover is parallel, if less than 3, make a uturn
-#             elif frontSensor < 2.25:
-                
-#                 transmit('r0--90')
-#                 time.sleep(0.08)
-#                 print("LEFT TURN")
-        
-#         # RIGHT SIDE IS NOT PARALLEL    
-#         elif rightSensorDifference > sensorDifferenceLimit and leftSensorDifference < sensorDifferenceLimit:
-#             print("Right side not parallel...")
-            
-#             if frontSensor >= 2.25:
-#                 # move forward 1 inch
-#                 transmit('w0-1')
-#                 time.sleep(0.08)
-#                 print("FORWARD ONE INCH")
-            
-#             # rover is parallel, if less than 3, make a uturn
-#             elif frontSensor < 2.25:
-                
-#                 transmit('r0-90')
-#                 time.sleep(0.08)
-#                 print("RIGHT TURN")
-        
-#     # ROVER IS PARALLEL
-#     elif rightSensorDifference < sensorDifferenceLimit and leftSensorDifference < sensorDifferenceLimit:
-        
-#         if frontSensor>=2.25:
-#             # move forward 1 inch
-#             transmit('w0-1')
-#             time.sleep(0.08)
-#             print("rOVER PARALLEL. FORWARD ONE INCH.")
-#         elif frontSensor < 2.25:
-#             if leftFrontSensor > rightFrontSensor:
-#                 transmit('r0--90')
-#                 time.sleep(0.08)
-#             elif leftFrontSensor < rightFrontSensor:
-#                 transmit('r0-90')
-#                 time.sleep(0.08)
-            
-            
-#     print("--------------")
-    
-#     time.sleep(0.1)
-#     ct += 1
-    
-#     # if ct > 1000:
-#     #     RUNNING = False
-#     #     print("Sequence Complete!")
-    
+# need * to unpack list
+current = Loc.get_location(*current_test_wall_config)
+print(current)
+for loc in current:
+    print(loc, Loc.neighbours(loc))
+front_square = Loc.get_location(*front_test_wall_config1)
+print(front_square)
+current = Loc.get_location(*current_test_wall_config, neighbouring_squares=front_square)
+print(current)
