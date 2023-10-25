@@ -36,7 +36,7 @@ class mazeLocalization():
     def get_location(self, front=False, left=False, back=False, right=False, neighbouring_squares=None):
         '''
         input: wall readings (True = wall, False = no wall)
-        output: list of potential locations in maze (ie. A1)
+        output: list of potential locations in maze (ie. ['A2', 'B2'])
         '''
         # put wall readings in list to check wall configuration
         # organized in counterclockwise direction starting from front
@@ -82,8 +82,8 @@ class mazeLocalization():
 
     def neighbours(self, pot_loc):
         '''
-        input: list of potential locations
-        return: list of neighbouring squares
+        input: potential location label
+        return: list of neighbouring squares, list of corresponding wall configurations
         '''
         # get coordinate of potential location
         for row in self.mazeLabels:
