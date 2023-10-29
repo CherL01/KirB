@@ -98,6 +98,7 @@ eStopLimit = 1.25
 
 #start by rotating 90 degrees (test)
 transmit('r0-90')
+time.sleep(0.5)
 
 ct = 0
 while RUNNING:

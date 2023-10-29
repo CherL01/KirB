@@ -28,7 +28,7 @@ import math
 from threading import Thread
 import _thread
 from datetime import datetime
-from KIRB_localization import mazeLocalization
+# from KIRB_localization import mazeLocalization
 
 def transmit(data):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -103,6 +103,7 @@ class ObstacleAvoidance():
 
         # check if front sensor reading is less than emergency stop limit
         # if (self.frontSensor < self.eStopLimit) or (self.leftFrontSensor < self.eStopLimit) or (self.leftBackSensor < self.eStopLimit) or (self.rightFrontSensor < self.eStopLimit) or (self.rightBackSensor < self.eStopLimit):
+        print('MIN',min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor))
         if min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor) < self.eStopLimit:
             transmit('xx')
             self.RUNNING = False
@@ -125,6 +126,7 @@ class ObstacleAvoidance():
         time.sleep(0.08)
         print(f"Ultrasonic {sensor_name} reading: {round(responses[0], 3)}")
         sensor = responses[0]
+        print('SENSOR', sensor)
 
         return sensor
     
