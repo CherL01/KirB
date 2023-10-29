@@ -75,17 +75,20 @@ class ObstacleAvoidance():
         # self.PARALLEL = False
         self.RUNNING = True
 
-        # initialize sensors
-        self.frontSensor = None
-        self.leftFrontSensor = None
-        self.leftBackSensor = None
-        self.rightFrontSensor = None
-        self.rightBackSensor = None
-
-        # store sensor labels, sensors, and sensor names in lists
+        # store sensor labels, sensors, and sensor names in lists/dicts
         self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4']
-        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        self.sensor_dict = {}
+        for l, s in zip(self.sensor_label_list, [None for i in range(5)]):
+            self.sensor_dict[l] = s
         self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT']
+        
+        # initialize sensors
+        self.frontSensor = self.sensor_dict['u0']
+        self.leftFrontSensor = self.sensor_dict['u1']
+        self.leftBackSensor = self.sensor_dict['u2']
+        self.rightFrontSensor = self.sensor_dict['u3']
+        self.rightBackSensor = self.sensor_dict['u4']
+        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
 
         #initialize sensor difference and limit
         self.leftSensorDifference = 0
@@ -117,18 +120,26 @@ class ObstacleAvoidance():
         output: sensor reading 
         '''
 
-        # get sensor name and sensor from label
+        # get sensor name from label
         sensor_name = self.sensor_name_list[self.sensor_label_list.index(sensor_label)]
-        sensor = self.sensor_list[self.sensor_label_list.index(sensor_label)]
 
         # get sensor reading
         transmit(sensor_label)
         time.sleep(0.08)
         print(f"Ultrasonic {sensor_name} reading: {round(responses[0], 3)}")
-        sensor = responses[0]
-        print('SENSOR', sensor)
+        self.sensor_dict[sensor_label] = responses[0]
+        print('SENSOR', self.sensor_dict[sensor_label])
+        
+        self.frontSensor = self.sensor_dict['u0']
+        self.leftFrontSensor = self.sensor_dict['u1']
+        self.leftBackSensor = self.sensor_dict['u2']
+        self.rightFrontSensor = self.sensor_dict['u3']
+        self.rightBackSensor = self.sensor_dict['u4']
+        
+        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        
 
-        return sensor
+        return self.sensor_dict[sensor_label]
     
     def sensor_diff(self):
         '''
