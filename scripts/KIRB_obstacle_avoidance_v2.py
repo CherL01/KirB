@@ -72,7 +72,7 @@ class ObstacleAvoidance():
 
     def __init__(self):
 
-        self.PARALLEL = False
+        # self.PARALLEL = False
         self.RUNNING = True
 
         # initialize sensors
@@ -81,6 +81,11 @@ class ObstacleAvoidance():
         self.leftBackSensor = None
         self.rightFrontSensor = None
         self.rightBackSensor = None
+
+        # store sensor labels, sensors, and sensor names in lists
+        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4']
+        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT']
 
         #initialize sensor difference and limit
         self.leftSensorDifference = 0
@@ -97,24 +102,57 @@ class ObstacleAvoidance():
         '''
 
         # check if front sensor reading is less than emergency stop limit
-        if self.frontSensor < self.eStopLimit:
+        # if (self.frontSensor < self.eStopLimit) or (self.leftFrontSensor < self.eStopLimit) or (self.leftBackSensor < self.eStopLimit) or (self.rightFrontSensor < self.eStopLimit) or (self.rightBackSensor < self.eStopLimit):
+        if min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor) < self.eStopLimit:
             transmit('xx')
             self.RUNNING = False
             print("Emergency stop!")
 
-    def sensor_reading(self, sensor='u0', sensor_name='FRONT'):
+        #### might change code to move away from closest wall instead of stopping ####
+
+    def sensor_reading(self, sensor_label='u0'):
         '''
         input: sensor of interest
         output: sensor reading 
         '''
 
-        sensor_list = [self.frontSensor, self.]
+        # get sensor name and sensor from label
+        sensor_name = self.sensor_name_list[self.sensor_label_list.index(sensor_label)]
+        sensor = self.sensor_list[self.sensor_label_list.index(sensor_label)]
 
-        transmit(sensor)
+        # get sensor reading
+        transmit(sensor_label)
         time.sleep(0.08)
         print(f"Ultrasonic {sensor_name} reading: {round(responses[0], 3)}")
-        self.frontSensor = responses[0]
+        sensor = responses[0]
 
+        return sensor
+    
+    def sensor_diff(self):
+        '''
+        input: self
+        output: None
+
+        calculate sensor differences
+        '''
+
+        # find difference between left sensors
+        self.leftSensorDifference = abs(self.leftFrontSensor - self.leftBackSensor)
+
+        # find difference between right sensors
+        self.rightSensorDifference = abs(self.rightFrontSensor - self.rightBackSensor)
+
+    def move(self, command='w0-1'):
+        '''
+        input: movement command
+        output: None
+
+        transmits command
+        '''
+
+        transmit(command)
+        time.sleep(0.08)
+    
     def parallel(self):
         '''
         input: self
@@ -125,8 +163,123 @@ class ObstacleAvoidance():
 
         #start by rotating 90 degrees (test)
         transmit('r0-90')
+        time.sleep(0.5)
 
-        while self.PARALLEL == False:
+        while (self.RUNNING == True): # (self.PARALLEL == False) 
+
+            # check sensors, order: front -> front left -> back left -> front right -> back right
+            for sensor in ['u0', 'u1', 'u2', 'u3', 'u4']:
+                self.sensor_reading(sensor)
+
+            # check if emergency stop needed
+            self.emergency_stop()
+
+            # ROVER IS NOT PARALLEL
+            self.sensor_diff()
+            if max(self.leftSensorDifference, self.rightSensorDifference) > self.sensorDifferenceLimit:
+            
+                # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
+                if self.leftSensorDifference > self.sensorDifferenceLimit and self.rightSensorDifference > self.sensorDifferenceLimit:
+                    
+                    # CONDITION #1: 45deg placement
+                    closest = self.sensor_list.index(min(self.sensor_list[1:]))
+                    
+                    # TURN 4 DEG WHEN NOT ALIGNED
+                    # front left is closest
+                    if closest == 1:
+                        self.move('r0-4')
+                
+                    # back left is closest
+                    elif closest == 2:
+                        self.move('r0--4')
+
+                    # front right is closest
+                    elif closest == 3:
+                        self.move('r0--4')
+
+                    # back right is closest
+                    elif closest == 4:
+                        self.move('r0-4')
+
+                    
+                    # CONDITION #2: 3-way/4-way intersection (NOT AT WALL YET)
+                    if self.frontSensor >= 2.5:
+                        self.move('w0-1')
+
+                    # CONDITION #3: 3-way/4-way intersection (AT THE WALL)
+                    elif self.frontSensor < 2.5:
+                        
+                        # 3 way intersection
+                            # if this localizing, turn toward closest side
+                            # if this is dropping block off at B site, turn towards B site specified
+                            
+                        # 4 way interestion
+                            # idk yet depends on where its going
+                            
+                        #placeholder move back 1 inch
+                        self.move('w0--1')
+
+            
+                # LEFT SIDE IS NOT PARALLEL
+                elif self.leftSensorDifference > self.sensorDifferenceLimit and self.rightSensorDifference < self.sensorDifferenceLimit:
+                    print("Left side not parallel...")
+                    
+                    #if 
+                    if self.frontSensor >= 2.25:
+                        # move forward 1 inch
+                        self.move('w0-1')
+                    
+                    # rover is parallel, if less than 3, make a uturn
+                    elif self.frontSensor < 2.25:
+                        
+                        self.move('r0--90')
+                        print("LEFT TURN")
+                
+                # RIGHT SIDE IS NOT PARALLEL    
+                elif self.rightSensorDifference > self.sensorDifferenceLimit and self.leftSensorDifference < self.sensorDifferenceLimit:
+                    print("Right side not parallel...")
+                    
+                    if self.frontSensor >= 2.25:
+                        # move forward 1 inch
+                        self.move('w0-1')
+                        print("FORWARD ONE INCH")
+                    
+                    # rover is parallel, if less than 3, make a uturn
+                    elif self.frontSensor < 2.25:
+                        
+                        self.move('r0-90')
+                        print("RIGHT TURN")
+                
+            # ROVER IS PARALLEL
+            elif self.rightSensorDifference < self.sensorDifferenceLimit and self.leftSensorDifference < self.sensorDifferenceLimit:
+                
+                if self.frontSensor >= 2.25:
+                    # move forward 1 inch
+                    self.move('w0-1')
+                    print("rOVER PARALLEL. FORWARD ONE INCH.")
+
+                elif self.frontSensor < 2.25:
+                    if leftFrontSensor > rightFrontSensor:
+                        self.move('r0--90')
+
+                    elif self.leftFrontSensor < self.rightFrontSensor:
+                        self.move('r0-90')
+                    
+            print("--------------")
+            
+            time.sleep(0.1)
+
+            
+
+            
+
+
+
+
+
+
+
+
 
 
 
@@ -142,187 +295,5 @@ time_rx = 'Never'
 # Create tx and rx threads
 Thread(target = receive, daemon = True).start()
 
-# Run the sequence of commands
-RUNNING = True
-
-#initialize sensors
-frontSensor = 0
-leftFrontSensor = 0
-leftBackSensor = 0
-rightFrontSensor = 0
-rightBackSensor = 0
-
-#initialize sensor difference and limit
-leftSensorDifference = 0
-rightSensorDifference = 0
-sensorDifferenceLimit = 0.15
-eStopLimit = 1.25
-
-#start by rotating 90 degrees (test)
-transmit('r0-90')
-
-ct = 0
-while RUNNING:
-    
-    # check front sensor
-    transmit('u0')
-    time.sleep(0.08)
-    print(f"Ultrasonic FRONT reading: {round(responses[0], 3)}")
-    frontSensor = responses[0]
-    
-    if frontSensor < eStopLimit:
-        RUNNING = False
-        print("Emergency stop!")
-        transmit('xx')
-        break
-    
-    # check left front sensor
-    transmit('u1')
-    time.sleep(0.08)
-    print(f"Ultrasonic FRONT-LEFT reading: {round(responses[0], 3)}")
-    leftFrontSensor = responses[0]
-
-    # check left back sensor
-    transmit('u2')
-    time.sleep(0.08)
-    print(f"Ultrasonic BACK-LEFT reading: {round(responses[0], 3)}")
-    leftBackSensor = responses[0]
-    
-    # check right front sensor
-    transmit('u3')
-    time.sleep(0.08)
-    print(f"Ultrasonic FRONT-RIGHT reading: {round(responses[0], 3)}")
-    rightFrontSensor = responses[0]
-
-    # check right back sensor
-    transmit('u4')
-    time.sleep(0.08)
-    print(f"Ultrasonic BACK-RIGHT reading: {round(responses[0], 3)}")
-    rightBackSensor = responses[0]
-    
-    if leftBackSensor<eStopLimit or leftFrontSensor<eStopLimit or rightBackSensor<eStopLimit or rightFrontSensor<eStopLimit:
-        RUNNING = False
-        print("Emergency stop!")
-        transmit('xx')
-        break    
-    
-    # find difference between left sensors
-    leftSensorDifference = abs(leftFrontSensor-leftBackSensor)
-    # find difference between right sensors
-    rightSensorDifference = abs(rightFrontSensor-rightBackSensor)
-    
-    sensorList = [leftFrontSensor, leftBackSensor, rightFrontSensor, rightBackSensor]
-    
-    # ROVER IS NOT PARALLEL
-    if leftSensorDifference>sensorDifferenceLimit or rightSensorDifference>sensorDifferenceLimit:
-    
-        # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
-        if leftSensorDifference>sensorDifferenceLimit and rightSensorDifference>sensorDifferenceLimit:
-            
-            # CONDITION #1: 45deg placement
-            
-            closest = sensorList.index(min(sensorList))
-            
-            # TURN 4 DEG WHEN NOT ALIGNED
-            
-            # front left is closest
-            if closest==0:
-                transmit('r0-4')
-                time.sleep(0.08)
-                #print("")
-            # back left is closest
-            elif closest==1:
-                transmit('r0--4')
-                time.sleep(0.08)
-                #print("")
-            # front right is closest
-            elif closest==2:
-                transmit('r0--4')
-                time.sleep(0.08)
-                #print("")
-            # back right is closest
-            elif closest==3:
-                transmit('r0-4')
-                time.sleep(0.08)
-                #print("")
-            
-            # CONDITION #2: 3-way/4-way intersection (NOT AT WALL YET)
-            if frontSensor>=2.5:
-                transmit('w0-1')
-                time.sleep(0.08)
-
-            # CONDITION #3: 3-way/4-way intersection (AT THE WALL)
-            elif frontSensor<2.5:
-                
-                # 3 way intersection
-                    # if this localizing, turn toward closest side
-                    # if this is dropping block off at B site, turn towards B site specified
-                    
-                # 4 way interestion
-                    # idk yet depends on where its going
-                    
-                #placeholder move back 1 inch
-                transmit('w0--1')
-                time.sleep(0.08)
-
-    
-        # LEFT SIDE IS NOT PARALLEL
-        elif leftSensorDifference > sensorDifferenceLimit and rightSensorDifference < sensorDifferenceLimit:
-            print("Left side not parallel...")
-            
-            #if 
-            if frontSensor >= 2.25:
-                # move forward 1 inch
-                transmit('w0-1')
-                time.sleep(0.08)
-            
-            # rover is parallel, if less than 3, make a uturn
-            elif frontSensor < 2.25:
-                
-                transmit('r0--90')
-                time.sleep(0.08)
-                print("LEFT TURN")
-        
-        # RIGHT SIDE IS NOT PARALLEL    
-        elif rightSensorDifference > sensorDifferenceLimit and leftSensorDifference < sensorDifferenceLimit:
-            print("Right side not parallel...")
-            
-            if frontSensor >= 2.25:
-                # move forward 1 inch
-                transmit('w0-1')
-                time.sleep(0.08)
-                print("FORWARD ONE INCH")
-            
-            # rover is parallel, if less than 3, make a uturn
-            elif frontSensor < 2.25:
-                
-                transmit('r0-90')
-                time.sleep(0.08)
-                print("RIGHT TURN")
-        
-    # ROVER IS PARALLEL
-    elif rightSensorDifference < sensorDifferenceLimit and leftSensorDifference < sensorDifferenceLimit:
-        
-        if frontSensor>=2.25:
-            # move forward 1 inch
-            transmit('w0-1')
-            time.sleep(0.08)
-            print("rOVER PARALLEL. FORWARD ONE INCH.")
-        elif frontSensor < 2.25:
-            if leftFrontSensor > rightFrontSensor:
-                transmit('r0--90')
-                time.sleep(0.08)
-            elif leftFrontSensor < rightFrontSensor:
-                transmit('r0-90')
-                time.sleep(0.08)
-            
-            
-    print("--------------")
-    
-    time.sleep(0.1)
-    ct += 1
-    
-    # if ct > 1000:
-    #     RUNNING = False
-    #     print("Sequence Complete!")
-    
+OA = ObstacleAvoidance()
+OA.parallel()
