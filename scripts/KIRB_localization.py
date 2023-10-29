@@ -1,46 +1,40 @@
-import socket
-import struct
-import time
 import math
-from threading import Thread
-import _thread
-from datetime import datetime
 import numpy as np
-
-# maze labels
-maze_labels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
-
-# maze wall configurations
-wall_configs = [
-    [2, 1, 3, 2, math.inf, 4, math.inf, 4],
-    [1, 2, math.inf, 2, 3, 0, 3, 1],
-    [3, math.inf, 4, math.inf, math.inf, 3, math.inf, 3],
-    [2, 3, 1, 3, 3, 2, math.inf, 4]
-]
-
-# dict mapping maze labels with wall configurations
-maze_map = {}
-for l, c in zip(maze_labels, wall_configs):
-    for label, value in zip(l, c):
-        maze_map[label] = value 
 
 class mazeLocalization():
 
     # initialize maze coordinates
-    def __init__(self, mazeLabels, wallConfigs, mazeMap):
-        self.mazeLabels = mazeLabels
-        self.wallConfigs = wallConfigs
-        self.mazeMap = mazeMap
+    def __init__(self):
+        
+        # maze labels
+        self.mazeLabels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
+        
+        # maze wall configurations
+        self.wallConfigs = [
+            [2, 1, 3, 2, math.inf, 4, math.inf, 4],
+            [1, 2, math.inf, 2, 3, 0, 3, 1],
+            [3, math.inf, 4, math.inf, math.inf, 3, math.inf, 3],
+            [2, 3, 1, 3, 3, 2, math.inf, 4]
+        ]
+
+        # dict mapping maze labels with wall configurations
+        self.mazeMap = {}
+        for l, c in zip(self.mazeLabels, self.wallConfigs):
+            for label, value in zip(l, c):
+                self.mazeMap[label] = value 
 
     # get potential locations of current square
-    def get_location(self, front=False, left=False, back=False, right=False, neighbouring_squares=None):
+    def get_location(self, orientations, neighbouring_squares=None):
         '''
-        input: wall readings (True = wall, False = no wall)
+        input: 
+            - list of wall readings at different orientations 
+                -- organized in counterclockwise direction starting from front ([front, left, back, right])
+                -- True = wall, False = no wall
+                -- ie. [False, True, True, True]
+            - list of neighbouring squares labels
         output: list of potential locations in maze (ie. ['A2', 'B2'])
         '''
-        # put wall readings in list to check wall configuration
-        # organized in counterclockwise direction starting from front
-        orientations = [front, left, back, right]
+        # set current wall configuration as None
         wall_config = None
 
         # print('get_location function - orientation: ', orientations)
@@ -52,7 +46,7 @@ class mazeLocalization():
                 wall_config = 1
             # sum of 2 = 2 walls in reading
             elif sum(orientations) == 2:
-                indices = [i+1 for i, x in enumerate(orientations) if x == True]
+                indices = [i for i, x in enumerate(orientations) if x == True]
                 # if sum is even then walls are opposite
                 if sum(indices) % 2 == 1:
                     wall_config = 2
@@ -106,17 +100,74 @@ class mazeLocalization():
 
 ##############################################################################################
 
-# testing
-current_test_wall_config = [False, True, True, True]
-front_test_wall_config1 = [False, True, False, True]
+# # maze labels
+# maze_labels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
 
-Loc = mazeLocalization(maze_labels, wall_configs, maze_map)
-# need * to unpack list
-current = Loc.get_location(*current_test_wall_config)
-print(current)
-for loc in current:
-    print(loc, Loc.neighbours(loc))
-front_square = Loc.get_location(*front_test_wall_config1)
-print(front_square)
-current = Loc.get_location(*current_test_wall_config, neighbouring_squares=front_square)
-print(current)
+# # maze wall configurations
+# wall_configs = [
+#     [2, 1, 3, 2, math.inf, 4, math.inf, 4],
+#     [1, 2, math.inf, 2, 3, 0, 3, 1],
+#     [3, math.inf, 4, math.inf, math.inf, 3, math.inf, 3],
+#     [2, 3, 1, 3, 3, 2, math.inf, 4]
+# ]
+
+# # dict mapping maze labels with wall configurations
+# maze_map = {}
+# for l, c in zip(maze_labels, wall_configs):
+#     for label, value in zip(l, c):
+#         maze_map[label] = value 
+
+### testing - NEED TO FINISH
+
+Loc = mazeLocalization()
+
+# # test 1
+# current_test_wall_config1 = [False, True, True, True]
+# front_test_wall_config1 = [False, True, False, True]
+
+# current = Loc.get_location(current_test_wall_config1)
+# print(current)
+# for loc in current:
+#     print(loc, Loc.neighbours(loc))
+# front_square = Loc.get_location(front_test_wall_config1)
+# print(front_square)
+# current = Loc.get_location(current_test_wall_config1, neighbouring_squares=front_square)
+# print(current) # should return 'D8'
+
+# # test 2
+# current_test_wall_config2 = [True, True, False, False]
+# back_test_wall_config2 = [False, True, False, True]
+
+# current = Loc.get_location(current_test_wall_config2)
+# print(current)
+# for loc in current:
+#     print(loc, Loc.neighbours(loc))
+# back_square = Loc.get_location(back_test_wall_config2)
+# print(back_square)
+# current = Loc.get_location(current_test_wall_config2, neighbouring_squares=back_square)
+# print(current) # should return 'B4'
+
+wall_configs = [
+    [2, 1, 3, 2, math.inf, 4, math.inf, 4],
+    [1, 2, math.inf, 2, 3, 0, 3, 1],
+    [3, math.inf, 4, math.inf, math.inf, 3, math.inf, 3],
+    [2, 3, 1, 3, 3, 2, math.inf, 4]
+]
+
+wall_readings = []
+for row in wall_configs:
+    for column in row:
+        
+        
+            
+
+
+for row in wall_configs:
+    for column in row:
+        if column != math.inf:
+            if column == 4:
+                wall_readings = []
+            current = Loc.get_location(wall_readings)
+            while len(current) > 1:
+                right_square = wall_configs[row][column+1]
+                    
