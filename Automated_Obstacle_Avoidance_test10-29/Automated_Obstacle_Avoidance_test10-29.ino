@@ -1,17 +1,105 @@
-void setup(){
-// Start the Serial connection
- Serial.begin(9600);
+//#include <Wire.h>
+//#include <SoftwareSerial.h>
+#include <NewPing.h>
+//
+////Define pins
+//SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
+//
+//Define ultrasonic sensors
+#define TRIGGER_PIN1          48    // Front
+#define TRIGGER_PIN2          49    // Left front
+#define TRIGGER_PIN3          50    // Left back
+#define TRIGGER_PIN4          51    // Right front
+#define TRIGGER_PIN5          52    // Right back
+#define TRIGGER_PIN6          53    // Front bottom (block detection)
+#define ECHO_PIN1             8     // Front sensor
+#define ECHO_PIN2             9     // Left front
+#define ECHO_PIN3             10    // Left back
+#define ECHO_PIN4             11    // Right front
+#define ECHO_PIN5             12    // Right back
+#define ECHO_PIN6             13    // Front bottom (block detection)
+#define MaxDistance           200
+//
+NewPing sonar1(TRIGGER_PIN1, ECHO_PIN1, MaxDistance);
+NewPing sonar2(TRIGGER_PIN2, ECHO_PIN2, MaxDistance);
+NewPing sonar3(TRIGGER_PIN3, ECHO_PIN3, MaxDistance);
+NewPing sonar4(TRIGGER_PIN4, ECHO_PIN4, MaxDistance);
+NewPing sonar5(TRIGGER_PIN5, ECHO_PIN5, MaxDistance);
+NewPing sonar6(TRIGGER_PIN6, ECHO_PIN6, MaxDistance);
+//
+////Define functions
+//void InitMotors(void);
+//void InitInterrupts(void);
+//void DisableMotors(void);
+//
+float ReadUltrasonicSensor(int sensorNum, int numAvg);
+//int Rotate(float rotDegrees);
+//int MoveForward(float movInches);
+//
+//void LeftMotorForward(void);
+//void LeftMotorBackward(void);
+//void RightMotorForward(void);
+//void RightMotorBackward(void);
+//
+////Define Variables
+//int LmotorSpeed = 100;
+//int RmotorSpeed = 100;
+//String cmdStr;
+//volatile long leftMotorCount = 0;
+//volatile long rightMotorCount = 0;
+//
+//// Define motor connections
+//int leftMotorPin = 5;       // L DC Motor - interrupt pin (might not need it tho idk)
+//int rightMotorPin = 4;      // R DC Motor - interrupt pin
+//
+//int rightMotorIn1 = 30;       // R DC Motor - IN1 on Motor Driver
+//int rightMotorIn2 = 31;       // R DC Motor - IN2 on Motor Driver
+//int leftMotorIn3 = 32;      // L DC Motor - IN3 on Motor Driver
+//int leftMotorIn4 = 33;      // L DC Motor - IN4 on Motor Driver
+//
+//int rightEncA = 2;           // R DC Motor - encoder A signal (needs interrupt)
+//int rightEncB = 22;          // R DC Motor - encoder B signal
+//int leftEncA = 3;          // L DC Motor - encoder A signal (needs interrupt)
+//int leftEncB = 23;         // L DC Motor - encoder B signal
+
+void setup() {
+//  // Initialize motors
+//  InitMotors();
+//
+//  // attach interrupts
+//  InitInterrupts();
+//  
+  // Initialize Serial communication
+  Serial.begin(9600);
+//  //Serial.println("Enter AT commands:");
+//  // HC-05 default speed in AT command mode 
+//  BTSerial.begin(38400); 
+//  delay(1000);
 }
+
 void loop(){
  
  if (Serial.available()>0){
   String cmd_python;
   cmd_python = Serial.readString();
 //  cmd_python.remove(0,1);
-  if (cmd_python.indexOf('u') != -1){
-      Serial.print("SENSOR: ");
-      Serial.println(cmd_python);
-      }
+    if (cmd_python.indexOf('u') != -1){
+//        Serial.print("SENSOR: ");
+//        Serial.println(cmd_python);
+        int numAvg = 2;
+
+        float distanceBuffer[6];
+        String strBuffer;
+        for (int i=0; i<6; i++) {
+        
+        distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
+        strBuffer += (String)i;
+        strBuffer += "=";
+        strBuffer += distanceBuffer[i];
+        strBuffer += " | ";
+        }
+        Serial.println(strBuffer);
+    }
   if (cmd_python.indexOf('w') != -1){
       Serial.print("DRIVE: ");
       Serial.println(cmd_python);
@@ -22,87 +110,6 @@ void loop(){
       }
  }
 }
-
-
-// #include <Wire.h>
-// #include <SoftwareSerial.h>
-// #include <NewPing.h>
-
-// //Define pins
-// SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
-
-// //Define ultrasonic sensors
-// #define TRIGGER_PIN1          48    // Front
-// #define TRIGGER_PIN2          49    // Left front
-// #define TRIGGER_PIN3          50    // Left back
-// #define TRIGGER_PIN4          51    // Right front
-// #define TRIGGER_PIN5          52    // Right back
-// #define TRIGGER_PIN6          53    // Front bottom (block detection)
-// #define ECHO_PIN1             8     // Front sensor
-// #define ECHO_PIN2             9     // Left front
-// #define ECHO_PIN3             10    // Left back
-// #define ECHO_PIN4             11    // Right front
-// #define ECHO_PIN5             12    // Right back
-// #define ECHO_PIN6             13    // Front bottom (block detection)
-// #define MaxDistance           200
-
-// NewPing sonar1(TRIGGER_PIN1, ECHO_PIN1, MaxDistance);
-// NewPing sonar2(TRIGGER_PIN2, ECHO_PIN2, MaxDistance);
-// NewPing sonar3(TRIGGER_PIN3, ECHO_PIN3, MaxDistance);
-// NewPing sonar4(TRIGGER_PIN4, ECHO_PIN4, MaxDistance);
-// NewPing sonar5(TRIGGER_PIN5, ECHO_PIN5, MaxDistance);
-// NewPing sonar6(TRIGGER_PIN6, ECHO_PIN6, MaxDistance);
-
-// //Define functions
-// void InitMotors(void);
-// void InitInterrupts(void);
-// void DisableMotors(void);
-
-// float ReadUltrasonicSensor(int sensorNum, int numAvg);
-// int Rotate(float rotDegrees);
-// int MoveForward(float movInches);
-
-// void LeftMotorForward(void);
-// void LeftMotorBackward(void);
-// void RightMotorForward(void);
-// void RightMotorBackward(void);
-
-// //Define Variables
-// int LmotorSpeed = 100;
-// int RmotorSpeed = 100;
-// String cmdStr;
-// volatile long leftMotorCount = 0;
-// volatile long rightMotorCount = 0;
-
-// // Define motor connections
-// int leftMotorPin = 5;       // L DC Motor - interrupt pin (might not need it tho idk)
-// int rightMotorPin = 4;      // R DC Motor - interrupt pin
-
-// int rightMotorIn1 = 30;       // R DC Motor - IN1 on Motor Driver
-// int rightMotorIn2 = 31;       // R DC Motor - IN2 on Motor Driver
-// int leftMotorIn3 = 32;      // L DC Motor - IN3 on Motor Driver
-// int leftMotorIn4 = 33;      // L DC Motor - IN4 on Motor Driver
-
-// int rightEncA = 2;           // R DC Motor - encoder A signal (needs interrupt)
-// int rightEncB = 22;          // R DC Motor - encoder B signal
-// int leftEncA = 3;          // L DC Motor - encoder A signal (needs interrupt)
-// int leftEncB = 23;         // L DC Motor - encoder B signal
-
-
-// void setup() {
-//   // Initialize motors
-//   InitMotors();
-
-//   // attach interrupts
-//   InitInterrupts();
-  
-//   // Initialize Serial communication
-//   Serial.begin(9600);
-//   //Serial.println("Enter AT commands:");
-//   // HC-05 default speed in AT command mode 
-//   BTSerial.begin(38400); 
-//   delay(1000);
-// }
 
 // void loop() {
     
@@ -122,30 +129,7 @@ void loop(){
 //       cmdStr.remove(0,3);
 //       Rotate(cmdStr.toFloat());
       
-//     } else if (cmdStr.charAt(0) == 'u') {
-//       // Check which ultrasonic sensor we want to read from
-//       int numAvg = 2;       // total avg time
-//       cmdStr.remove(0,1);   // remove first char u to determine which sensor to read from
-
-//       if (cmdStr.charAt(0) == 'a') {
-//         //get all sensor readings at once (with command ua)
-//         float distanceBuffer[6];
-//         String strBuffer;
-//         for (int i=0; i<6; i++) {
-//           distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
-//           strBuffer += (String)i;
-//           strBuffer += "=";
-//           strBuffer += distanceBuffer[i];
-//           strBuffer += " | ";
-//         }
-//         Serial.println(strBuffer);
-//       } else {
-//         //get individual sensor readings
-//         float distance = ReadUltrasonicSensor(cmdStr.toInt(), numAvg);
-//         Serial.println(distance);
-//       }
-      
-//     } else {
+//     }  else {
 //       Serial.println("Invalid command, please try again.");
 //     }
 //   }
@@ -220,30 +204,30 @@ void loop(){
   
 // }
 
-// float ReadUltrasonicSensor(int sensorNum, int numAvg) {
+float ReadUltrasonicSensor(int sensorNum, int numAvg) {
 
-//   float tempVal = 0.0;
+  float tempVal = 0.0;
 
-//   for (int i=0; i< numAvg; i++) {
-//     delay(50);
-//     float echoCM = 0;
-//     if (sensorNum == 1) {
-//       echoCM = sonar1.ping_cm();
-//     } else if (sensorNum == 2) {
-//       echoCM = sonar2.ping_cm();
-//     } else if (sensorNum == 3) {
-//       echoCM = sonar3.ping_cm();
-//     } else if (sensorNum == 4) {
-//       echoCM = sonar4.ping_cm();
-//     } else if (sensorNum == 5) {
-//       echoCM = sonar5.ping_cm();
-//     } else if (sensorNum == 6) {
-//       echoCM = sonar6.ping_cm();
-//     }
-//     tempVal+= echoCM/2.54;    // convert to inches
-//   }
-//   return tempVal / ((float)numAvg);
-// }
+  for (int i=0; i< numAvg; i++) {
+    delay(50);
+    float echoCM = 0;
+    if (sensorNum == 1) {
+      echoCM = sonar1.ping_cm();
+    } else if (sensorNum == 2) {
+      echoCM = sonar2.ping_cm();
+    } else if (sensorNum == 3) {
+      echoCM = sonar3.ping_cm();
+    } else if (sensorNum == 4) {
+      echoCM = sonar4.ping_cm();
+    } else if (sensorNum == 5) {
+      echoCM = sonar5.ping_cm();
+    } else if (sensorNum == 6) {
+      echoCM = sonar6.ping_cm();
+    }
+    tempVal+= echoCM/2.54;    // convert to inches
+  }
+  return tempVal / ((float)numAvg);
+}
 
 // int MoveForward(float movInches) {
 //   // ** need to calculate how much wheel rotation is needed per inch (need encoders working)
@@ -340,5 +324,3 @@ void loop(){
 //   Serial.print("Time Elapsed: ");
 //   Serial.println(timeElapsed);      // prints the time elapsed
 // }
-
-

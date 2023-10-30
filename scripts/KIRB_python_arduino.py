@@ -7,7 +7,7 @@ while s:
     # s=' ee'
     # print(type(s))
     ser.write(s.encode()) # writes letter to Arduino
-    time.sleep(1.5) # you can also use pause(0.1)
+    time.sleep(3) # you can also use pause(0.1)
     print('python command')
     print(ser.readline().strip().decode('ascii')) # reads from Arduino
     print('---------------------------')
