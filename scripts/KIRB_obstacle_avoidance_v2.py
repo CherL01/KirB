@@ -83,7 +83,7 @@ PORT_TX = 61200     # The port used by the *CLIENT* to receive
 PORT_RX = 61201     # The port used by the *CLIENT* to send data
 
 ### Serial Setup ###
-PORT_SERIAL = 'COM3'
+PORT_SERIAL = 'COM5'
 BAUDRATE = 9600
 
 # Received responses
@@ -125,30 +125,30 @@ SER = serial.Serial(PORT_SERIAL, BAUDRATE, timeout=0)
 #                 print('Response not received from robot.')
 #                 _thread.interrupt_main()
 
-def transmitSerial(data):
-    SER.write(data.encode('ascii'))
+# def transmitSerial(data):
+#     SER.write(data.encode('ascii'))
 
-def receiveSerial():
-    global responses
-    global time_rx
+# def receiveSerial():
+#     global responses
+#     global time_rx
 
-    while True:
-        # If responses are ascii characters, use this
-        # response_raw = (SER.readline().strip().decode('ascii'),)
-        # print(1, response_raw)    # debug only
+#     while True:
+#         # If responses are ascii characters, use this
+#         # response_raw = (SER.readline().strip().decode('ascii'),)
+#         # print(1, response_raw)    # debug only
 
-        # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
-        # response_raw = bytes_to_list(SER.readline())
-        reading = SER.readline().strip().decode('ascii')
+#         # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
+#         # response_raw = bytes_to_list(SER.readline())
+#         reading = SER.readline().strip().decode('ascii')
 
-        # If response received, save it
-        if len(reading) != 0:
-            # print(2, response_raw[0])     # debug only
-            responses = reading
-            # print(3, responses[0])    # debug only
-            time_rx = datetime.now().strftime("%H:%M:%S")
+#         # If response received, save it
+#         if len(reading) != 0:
+#             # print(2, response_raw[0])     # debug only
+#             responses = reading
+#             # print(3, responses[0])    # debug only
+#             time_rx = datetime.now().strftime("%H:%M:%S")
 
-        time.sleep(0.5)
+#         time.sleep(0.5)
 
 # def transmitSerial(data):
 #     if SIMULATE:
@@ -214,38 +214,72 @@ class ObstacleAvoidance():
 
         #### might change code to move away from closest wall instead of stopping ####
 
-    def sensor_reading(self, sensor_label='u0'):
+    def send_command(self, command=' ua'):
         '''
         input: sensor of interest
         output: sensor reading 
         '''
 
-        # get sensor name from label
-        sensor_name = self.sensor_name_list[self.sensor_label_list.index(sensor_label)]
+        # # get sensor name from label
+        # sensor_name = self.sensor_name_list[self.sensor_label_list.index(sensor_label)]
 
         # get sensor reading
-        transmitSerial(sensor_label)
-        time.sleep(0.08)
+        # transmitSerial(f' {sensor_label}')
+        # transmitSerial(' ua')
+        # time.sleep(5)
         # print(f"Ultrasonic {sensor_name} reading: {round(responses[0], 3)}")
         # self.sensor_dict[sensor_label] = responses[0]
-        reading = responses
-        sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
-        for i in range(len(sensor_readings)-1):
-            self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
-        # print('SENSOR', self.sensor_dict[sensor_label])
-        print('SENSORS', self.sensor_dict)
+        # print('RESPONSES', responses)
+        
+        dummy_cmd = ' ua'
+        print('dummy command: ', dummy_cmd)
+        # writes command to Arduino
+        SER.write(dummy_cmd.encode())
+        time.sleep(4) 
+        dummy_reading = SER.readline().strip().decode('ascii') 
+        print('dummy reading: ', dummy_reading)
+        
+        dummy_sensor_readings = [float(r.split('=')[1]) for r in dummy_reading.split('|')[1:7]]
+        print('dummy sensor readidng: ', dummy_sensor_readings)
+        
+        if responses[0] == False:
+            
+            # transmitSerial(' ua')
+            # time.sleep(5)
+            # print('RESPONSES IN LOOP', responses)
+            
+            # reading = responses
+            # sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
+            # for i in range(len(sensor_readings)-1):
+            #     self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
+            # # print('SENSOR', self.sensor_dict[sensor_label])
+            # print('SENSORS', self.sensor_dict)
+            
+            cmd = command
+            print(cmd)
+            # writes command to Arduino
+            SER.write(cmd.encode()) 
+            time.sleep(4) 
+            reading = SER.readline().strip().decode('ascii') 
+            print(reading)
+            
+            sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
+            print(sensor_readings)
+            
+            for i in range(len(sensor_readings)-1):
+                self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
 
-        
-        self.frontSensor = self.sensor_dict['u0']
-        self.leftFrontSensor = self.sensor_dict['u1']
-        self.leftBackSensor = self.sensor_dict['u2']
-        self.rightFrontSensor = self.sensor_dict['u3']
-        self.rightBackSensor = self.sensor_dict['u4']
-        
-        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
-        
+            
+            self.frontSensor = self.sensor_dict['u0']
+            self.leftFrontSensor = self.sensor_dict['u1']
+            self.leftBackSensor = self.sensor_dict['u2']
+            self.rightFrontSensor = self.sensor_dict['u3']
+            self.rightBackSensor = self.sensor_dict['u4']
+            
+            self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+            
 
-        return self.sensor_dict[sensor_label]
+            return self.sensor_dict
     
     def sensor_diff(self):
         '''
@@ -261,7 +295,7 @@ class ObstacleAvoidance():
         # find difference between right sensors
         self.rightSensorDifference = abs(self.rightFrontSensor - self.rightBackSensor)
 
-    def move(self, command='w0-1'):
+    def move(self, command=' w0-1'):
         '''
         input: movement command
         output: None
@@ -280,16 +314,20 @@ class ObstacleAvoidance():
         parallel alignment algorithm to have one side (left/right) of the robot to align parallel with a wall
         '''
 
+        # initial command - not registered
+        transmitSerial(' r0-90')
+
         #start by rotating 90 degrees (test)
-        transmitSerial('r0-90')
+        transmitSerial(' r0-90')
         time.sleep(0.5)
 
         while (self.RUNNING == True): # (self.PARALLEL == False) 
 
             # check sensors, order: front -> front left -> back left -> front right -> back right
-            for sensor in ['u0', 'u1', 'u2', 'u3', 'u4']:
+            for sensor in ['u1']: #['u0', 'u1', 'u2', 'u3', 'u4']:
                 self.sensor_reading(sensor)
 
+            print('sensor dict', self.sensor_dict)
             # check if emergency stop needed
             self.emergency_stop()
 
@@ -408,5 +446,5 @@ class ObstacleAvoidance():
 # # Create tx and rx threads
 # Thread(target = receive, daemon = True).start()
 
-# OA = ObstacleAvoidance()
-# OA.parallel()
+OA = ObstacleAvoidance()
+OA.parallel()
