@@ -134,11 +134,11 @@ def receiveSerial():
 
         time.sleep(0.5)
 
-def transmitSerial(data):
-    if SIMULATE:
-        transmitNetwork(data)
-    else:
-        transmitSerial(data)
+# def transmitSerial(data):
+#     if SIMULATE:
+#         transmitNetwork(data)
+#     else:
+#         transmitSerial(data)
 
 def bytes_to_list(msg):
     if SIMULATE:
@@ -356,7 +356,7 @@ class ObstacleAvoidance():
                     print("rOVER PARALLEL. FORWARD ONE INCH.")
 
                 elif self.frontSensor < 2.25:
-                    if leftFrontSensor > rightFrontSensor:
+                    if self.leftFrontSensor > self.rightFrontSensor:
                         self.move(' r0--90')
 
                     elif self.leftFrontSensor < self.rightFrontSensor:

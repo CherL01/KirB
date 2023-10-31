@@ -7,11 +7,11 @@ OA = ObstacleAvoidance()
 RUNNING = True
 
 while RUNNING:
-    cmd = input('enter: ')
-    # cmd = 'u1'
+    # cmd = input('enter: ')
+    cmd = ' w0-1'
     # writes command to Arduino
     ser.write(cmd.encode()) 
-    time.sleep(3) 
+    time.sleep(5) 
     reading = ser.readline().strip().decode('ascii') 
     print(reading)
     
