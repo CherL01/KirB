@@ -284,24 +284,24 @@ class ObstacleAvoidance():
                     # TURN 4 DEG WHEN NOT ALIGNED
                     # front left is closest
                     if closest == 1:
-                        self.move('r0-4')
+                        self.move(' r0-4')
                 
                     # back left is closest
                     elif closest == 2:
-                        self.move('r0--4')
+                        self.move(' r0--4')
 
                     # front right is closest
                     elif closest == 3:
-                        self.move('r0--4')
+                        self.move(' r0--4')
 
                     # back right is closest
                     elif closest == 4:
-                        self.move('r0-4')
+                        self.move(' r0-4')
 
                     
                     # CONDITION #2: 3-way/4-way intersection (NOT AT WALL YET)
                     if self.frontSensor >= 2.5:
-                        self.move('w0-1')
+                        self.move(' w0-1')
 
                     # CONDITION #3: 3-way/4-way intersection (AT THE WALL)
                     elif self.frontSensor < 2.5:
@@ -314,7 +314,7 @@ class ObstacleAvoidance():
                             # idk yet depends on where its going
                             
                         #placeholder move back 1 inch
-                        self.move('w0--1')
+                        self.move(' w0--1')
 
             
                 # LEFT SIDE IS NOT PARALLEL
@@ -324,12 +324,12 @@ class ObstacleAvoidance():
                     #if 
                     if self.frontSensor >= 2.25:
                         # move forward 1 inch
-                        self.move('w0-1')
+                        self.move(' w0-1')
                     
                     # rover is parallel, if less than 3, make a uturn
                     elif self.frontSensor < 2.25:
                         
-                        self.move('r0--90')
+                        self.move(' r0--90')
                         print("LEFT TURN")
                 
                 # RIGHT SIDE IS NOT PARALLEL    
@@ -338,13 +338,13 @@ class ObstacleAvoidance():
                     
                     if self.frontSensor >= 2.25:
                         # move forward 1 inch
-                        self.move('w0-1')
+                        self.move(' w0-1')
                         print("FORWARD ONE INCH")
                     
                     # rover is parallel, if less than 3, make a uturn
                     elif self.frontSensor < 2.25:
                         
-                        self.move('r0-90')
+                        self.move(' r0-90')
                         print("RIGHT TURN")
                 
             # ROVER IS PARALLEL
@@ -352,15 +352,15 @@ class ObstacleAvoidance():
                 
                 if self.frontSensor >= 2.25:
                     # move forward 1 inch
-                    self.move('w0-1')
+                    self.move(' w0-1')
                     print("rOVER PARALLEL. FORWARD ONE INCH.")
 
                 elif self.frontSensor < 2.25:
                     if leftFrontSensor > rightFrontSensor:
-                        self.move('r0--90')
+                        self.move(' r0--90')
 
                     elif self.leftFrontSensor < self.rightFrontSensor:
-                        self.move('r0-90')
+                        self.move(' r0-90')
                     
             print("--------------")
             
