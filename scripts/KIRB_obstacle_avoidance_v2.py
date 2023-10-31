@@ -21,16 +21,63 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # Code modified from examples on https://realpython.com/python-sockets/
 # and https://www.geeksforgeeks.org/python-display-text-to-pygame-window/
 
+# import socket
+# import struct
+# import time
+# import math
+# from threading import Thread
+# import _thread
+# from datetime import datetime
+# # from KIRB_localization import mazeLocalization
+
+# def transmitSerial(data):
+#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#         try:
+#             s.connect((HOST, PORT_TX))
+#             s.send(data.encode('utf-8'))
+#         except (ConnectionRefusedError, ConnectionResetError):
+#             print('Tx Connection was refused or reset.')
+#             _thread.interrupt_main()
+#         except TimeoutError:
+#             print('Tx socket timed out.')
+#             _thread.interrupt_main()
+#         except EOFError:
+#             print('\nKeyboardInterrupt triggered. Closing...')
+#             _thread.interrupt_main()
+
+# def receive():
+#     global responses
+#     global time_rx
+#     while True:
+#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
+#             try:
+#                 s2.connect((HOST, PORT_RX))
+#                 response_raw = s2.recv(1024)
+#                 if response_raw:
+#                     responses = bytes_to_list(response_raw)
+#                     time_rx = datetime.now().strftime("%H:%M:%S")
+#             except (ConnectionRefusedError, ConnectionResetError):
+#                 print('Rx connection was refused or reset.')
+#                 _thread.interrupt_main()
+#             except TimeoutError:
+#                 print('Response not received from robot.')
+#                 _thread.interrupt_main()
+
+# def bytes_to_list(msg):
+#     num_responses = int(len(msg)/8)
+#     data = struct.unpack("%sd" % str(num_responses), msg)
+#     return data
+
 import socket
+import serial
 import struct
 import time
 import math
 from threading import Thread
 import _thread
 from datetime import datetime
-# from KIRB_localization import mazeLocalization
 
-def transmit(data):
+def transmitNetwork(data):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.connect((HOST, PORT_TX))
@@ -45,7 +92,7 @@ def transmit(data):
             print('\nKeyboardInterrupt triggered. Closing...')
             _thread.interrupt_main()
 
-def receive():
+def receiveNetwork():
     global responses
     global time_rx
     while True:
@@ -63,10 +110,47 @@ def receive():
                 print('Response not received from robot.')
                 _thread.interrupt_main()
 
+def transmitSerial(data):
+    SER.write(data.encode('ascii'))
+
+def receiveSerial():
+    global responses
+    global time_rx
+
+    while True:
+        # If responses are ascii characters, use this
+        # response_raw = (SER.readline().strip().decode('ascii'),)
+        # print(1, response_raw)    # debug only
+
+        # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
+        response_raw = bytes_to_list(SER.readline())
+
+        # If response received, save it
+        if response_raw[0]:
+            # print(2, response_raw[0])     # debug only
+            responses = response_raw
+            # print(3, responses[0])    # debug only
+            time_rx = datetime.now().strftime("%H:%M:%S")
+
+        time.sleep(0.5)
+
+def transmitSerial(data):
+    if SIMULATE:
+        transmitNetwork(data)
+    else:
+        transmitSerial(data)
+
 def bytes_to_list(msg):
-    num_responses = int(len(msg)/8)
-    data = struct.unpack("%sd" % str(num_responses), msg)
-    return data
+    if SIMULATE:
+        num_responses = int(len(msg)/8)
+        data = struct.unpack("%sd" % str(num_responses), msg)
+        return data
+    else:
+        num_responses = int(len(msg)/8)
+        if num_responses:
+            unpackformat = "<" + num_responses*"f4x"
+            data = struct.unpack(unpackformat, msg)
+            return data
 
 class ObstacleAvoidance():
 
@@ -108,7 +192,7 @@ class ObstacleAvoidance():
         # if (self.frontSensor < self.eStopLimit) or (self.leftFrontSensor < self.eStopLimit) or (self.leftBackSensor < self.eStopLimit) or (self.rightFrontSensor < self.eStopLimit) or (self.rightBackSensor < self.eStopLimit):
         print('MIN',min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor))
         if min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor) < self.eStopLimit:
-            transmit('xx')
+            transmitSerial('xx')
             self.RUNNING = False
             print("Emergency stop!")
 
@@ -124,7 +208,7 @@ class ObstacleAvoidance():
         sensor_name = self.sensor_name_list[self.sensor_label_list.index(sensor_label)]
 
         # get sensor reading
-        transmit(sensor_label)
+        transmitSerial(sensor_label)
         time.sleep(0.08)
         print(f"Ultrasonic {sensor_name} reading: {round(responses[0], 3)}")
         self.sensor_dict[sensor_label] = responses[0]
@@ -163,7 +247,7 @@ class ObstacleAvoidance():
         transmits command
         '''
 
-        transmit(command)
+        transmitSerial(command)
         time.sleep(0.08)
     
     def parallel(self):
@@ -175,7 +259,7 @@ class ObstacleAvoidance():
         '''
 
         #start by rotating 90 degrees (test)
-        transmit('r0-90')
+        transmitSerial('r0-90')
         time.sleep(0.5)
 
         while (self.RUNNING == True): # (self.PARALLEL == False) 
@@ -286,27 +370,38 @@ class ObstacleAvoidance():
 
             
 
-
-
-
-
-
-
-
-
-
-
 ### Network Setup ###
 HOST = '127.0.0.1'  # The server's hostname or IP address
 PORT_TX = 61200     # The port used by the *CLIENT* to receive
 PORT_RX = 61201     # The port used by the *CLIENT* to send data
 
+### Serial Setup ###
+PORT_SERIAL = 'COM3'
+BAUDRATE = 9600
+
 # Received responses
 responses = [False]
 time_rx = 'Never'
 
-# Create tx and rx threads
-Thread(target = receive, daemon = True).start()
 
-OA = ObstacleAvoidance()
-OA.parallel()
+
+
+
+
+
+
+
+# ### Network Setup ###
+# HOST = '127.0.0.1'  # The server's hostname or IP address
+# PORT_TX = 61200     # The port used by the *CLIENT* to receive
+# PORT_RX = 61201     # The port used by the *CLIENT* to send data
+
+# # Received responses
+# responses = [False]
+# time_rx = 'Never'
+
+# # Create tx and rx threads
+# Thread(target = receive, daemon = True).start()
+
+# OA = ObstacleAvoidance()
+# OA.parallel()
