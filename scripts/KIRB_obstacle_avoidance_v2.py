@@ -1,172 +1,20 @@
-'''
-This file is part of SimMeR, an educational mechatronics robotics simulator.
-Initial development funded by the University of Toronto MIE Department.
-Copyright (C) 2023  Ian G. Bennett
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-'''
-
-# Basic echo client, for testing purposes
-# Code modified from examples on https://realpython.com/python-sockets/
-# and https://www.geeksforgeeks.org/python-display-text-to-pygame-window/
-
-# import socket
-# import struct
-# import time
-# import math
-# from threading import Thread
-# import _thread
-# from datetime import datetime
-# # from KIRB_localization import mazeLocalization
-
-# def transmitSerial(data):
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#         try:
-#             s.connect((HOST, PORT_TX))
-#             s.send(data.encode('utf-8'))
-#         except (ConnectionRefusedError, ConnectionResetError):
-#             print('Tx Connection was refused or reset.')
-#             _thread.interrupt_main()
-#         except TimeoutError:
-#             print('Tx socket timed out.')
-#             _thread.interrupt_main()
-#         except EOFError:
-#             print('\nKeyboardInterrupt triggered. Closing...')
-#             _thread.interrupt_main()
-
-# def receive():
-#     global responses
-#     global time_rx
-#     while True:
-#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
-#             try:
-#                 s2.connect((HOST, PORT_RX))
-#                 response_raw = s2.recv(1024)
-#                 if response_raw:
-#                     responses = bytes_to_list(response_raw)
-#                     time_rx = datetime.now().strftime("%H:%M:%S")
-#             except (ConnectionRefusedError, ConnectionResetError):
-#                 print('Rx connection was refused or reset.')
-#                 _thread.interrupt_main()
-#             except TimeoutError:
-#                 print('Response not received from robot.')
-#                 _thread.interrupt_main()
-
-# def bytes_to_list(msg):
-#     num_responses = int(len(msg)/8)
-#     data = struct.unpack("%sd" % str(num_responses), msg)
-#     return data
-
 import socket
-import serial
 import struct
 import time
 import math
 from threading import Thread
 import _thread
 from datetime import datetime
+# from KIRB_localization import mazeLocalization
 
-### Network Setup ###
-HOST = '127.0.0.1'  # The server's hostname or IP address
-PORT_TX = 61200     # The port used by the *CLIENT* to receive
-PORT_RX = 61201     # The port used by the *CLIENT* to send data
+COM_PORT = 'COM3'
+ser = serial.Serial(COM_PORT, 9600, timeout=0) 
 
-### Serial Setup ###
-PORT_SERIAL = 'COM5'
-BAUDRATE = 9600
-
-# Received responses
-responses = [False]
-time_rx = 'Never'
-
-SER = serial.Serial(PORT_SERIAL, BAUDRATE, timeout=0)
-
-# def transmitNetwork(data):
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#         try:
-#             s.connect((HOST, PORT_TX))
-#             s.send(data.encode('utf-8'))
-#         except (ConnectionRefusedError, ConnectionResetError):
-#             print('Tx Connection was refused or reset.')
-#             _thread.interrupt_main()
-#         except TimeoutError:
-#             print('Tx socket timed out.')
-#             _thread.interrupt_main()
-#         except EOFError:
-#             print('\nKeyboardInterrupt triggered. Closing...')
-#             _thread.interrupt_main()
-
-# def receiveNetwork():
-#     global responses
-#     global time_rx
-#     while True:
-#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
-#             try:
-#                 s2.connect((HOST, PORT_RX))
-#                 response_raw = s2.recv(1024)
-#                 if response_raw:
-#                     responses = bytes_to_list(response_raw)
-#                     time_rx = datetime.now().strftime("%H:%M:%S")
-#             except (ConnectionRefusedError, ConnectionResetError):
-#                 print('Rx connection was refused or reset.')
-#                 _thread.interrupt_main()
-#             except TimeoutError:
-#                 print('Response not received from robot.')
-#                 _thread.interrupt_main()
-
-# def transmitSerial(data):
-#     SER.write(data.encode('ascii'))
-
-# def receiveSerial():
-#     global responses
-#     global time_rx
-
-#     while True:
-#         # If responses are ascii characters, use this
-#         # response_raw = (SER.readline().strip().decode('ascii'),)
-#         # print(1, response_raw)    # debug only
-
-#         # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
-#         # response_raw = bytes_to_list(SER.readline())
-#         reading = SER.readline().strip().decode('ascii')
-
-#         # If response received, save it
-#         if len(reading) != 0:
-#             # print(2, response_raw[0])     # debug only
-#             responses = reading
-#             # print(3, responses[0])    # debug only
-#             time_rx = datetime.now().strftime("%H:%M:%S")
-
-#         time.sleep(0.5)
-
-# def transmitSerial(data):
-#     if SIMULATE:
-#         transmitNetwork(data)
-#     else:
-#         transmitSerial(data)
-
-# def bytes_to_list(msg):
-#     if SIMULATE:
-#         num_responses = int(len(msg)/8)
-#         data = struct.unpack("%sd" % str(num_responses), msg)
-#         return data
-#     else:
-#         num_responses = int(len(msg)/8)
-#         if num_responses:
-#             unpackformat = "<" + num_responses*"f4x"
-#             data = struct.unpack(unpackformat, msg)
-#             return data
+def write_read(x):
+    ser.write(bytes(x, 'utf-8'))
+    time.sleep(2.5)
+    data = ser.readline().strip().decode('ascii')
+    return data
 
 class ObstacleAvoidance():
 
@@ -208,7 +56,7 @@ class ObstacleAvoidance():
         # if (self.frontSensor < self.eStopLimit) or (self.leftFrontSensor < self.eStopLimit) or (self.leftBackSensor < self.eStopLimit) or (self.rightFrontSensor < self.eStopLimit) or (self.rightBackSensor < self.eStopLimit):
         print('MIN',min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor))
         if min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor) < self.eStopLimit:
-            transmitSerial(' xx')
+            transmitSerial('xx')
             self.RUNNING = False
             print("Emergency stop!")
 
@@ -231,55 +79,28 @@ class ObstacleAvoidance():
         # self.sensor_dict[sensor_label] = responses[0]
         # print('RESPONSES', responses)
         
-        dummy_cmd = ' ua'
-        print('dummy command: ', dummy_cmd)
-        # writes command to Arduino
-        SER.write(dummy_cmd.encode())
-        time.sleep(4) 
-        dummy_reading = SER.readline().strip().decode('ascii') 
-        print('dummy reading: ', dummy_reading)
+        ser.write(bytes(command, 'utf-8'))
+        time.sleep(2.5)
+        reading = ser.readline().strip().decode('ascii') 
+        print(reading)
         
-        dummy_sensor_readings = [float(r.split('=')[1]) for r in dummy_reading.split('|')[1:7]]
-        print('dummy sensor readidng: ', dummy_sensor_readings)
+        sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
+        print(sensor_readings)
         
-        if responses[0] == False:
-            
-            # transmitSerial(' ua')
-            # time.sleep(5)
-            # print('RESPONSES IN LOOP', responses)
-            
-            # reading = responses
-            # sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
-            # for i in range(len(sensor_readings)-1):
-            #     self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
-            # # print('SENSOR', self.sensor_dict[sensor_label])
-            # print('SENSORS', self.sensor_dict)
-            
-            cmd = command
-            print(cmd)
-            # writes command to Arduino
-            SER.write(cmd.encode()) 
-            time.sleep(4) 
-            reading = SER.readline().strip().decode('ascii') 
-            print(reading)
-            
-            sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
-            print(sensor_readings)
-            
-            for i in range(len(sensor_readings)-1):
-                self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
+        for i in range(len(sensor_readings)-1):
+            self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
 
-            
-            self.frontSensor = self.sensor_dict['u0']
-            self.leftFrontSensor = self.sensor_dict['u1']
-            self.leftBackSensor = self.sensor_dict['u2']
-            self.rightFrontSensor = self.sensor_dict['u3']
-            self.rightBackSensor = self.sensor_dict['u4']
-            
-            self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
-            
+        
+        self.frontSensor = self.sensor_dict['u0']
+        self.leftFrontSensor = self.sensor_dict['u1']
+        self.leftBackSensor = self.sensor_dict['u2']
+        self.rightFrontSensor = self.sensor_dict['u3']
+        self.rightBackSensor = self.sensor_dict['u4']
+        
+        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        
 
-            return self.sensor_dict
+        return self.sensor_dict
     
     def sensor_diff(self):
         '''

@@ -7,11 +7,11 @@ ser = serial.Serial(COM_PORT, 9600, timeout=0)
 
 def write_read(x):
     ser.write(bytes(x, 'utf-8'))
-    time.sleep(2.5)
+    time.sleep(3)
     data = ser.readline().strip().decode('ascii')
     return data
 
-for c in ['test command', 'u', 'w', 'r', 'u', 'u', 'r', 'w']:
+for c in ['test command', 'u', 'w', 'r', 'u', 'u', 'r', 'w']: # 'test command' 
     print('command: ', c)
     command = c
     value = write_read(command)
