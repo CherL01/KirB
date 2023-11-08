@@ -1,4 +1,5 @@
 import socket
+import serial
 import struct
 import time
 import math
@@ -15,6 +16,88 @@ def write_read(x):
     time.sleep(2.5)
     data = ser.readline().strip().decode('ascii')
     return data
+
+def transmitNetwork(data):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.connect((HOST, PORT_TX))
+            s.send(data.encode('utf-8'))
+        except (ConnectionRefusedError, ConnectionResetError):
+            print('Tx Connection was refused or reset.')
+            _thread.interrupt_main()
+        except TimeoutError:
+            print('Tx socket timed out.')
+            _thread.interrupt_main()
+        except EOFError:
+            print('\nKeyboardInterrupt triggered. Closing...')
+            _thread.interrupt_main()
+
+def receiveNetwork():
+    global responses
+    global time_rx
+    while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
+            try:
+                s2.connect((HOST, PORT_RX))
+                response_raw = s2.recv(1024)
+                if response_raw:
+                    responses = bytes_to_list(response_raw)
+                    time_rx = datetime.now().strftime("%H:%M:%S")
+            except (ConnectionRefusedError, ConnectionResetError):
+                print('Rx connection was refused or reset.')
+                _thread.interrupt_main()
+            except TimeoutError:
+                print('Response not received from robot.')
+                _thread.interrupt_main()
+
+def transmitSerial(data):
+    ser.write(data.encode('ascii'))
+
+def receiveSerial():
+    global responses
+    global time_rx
+
+    while True:
+        # If responses are ascii characters, use this
+        # response_raw = (SER.readline().strip().decode('ascii'),)
+        # print(1, response_raw)    # debug only
+
+        # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
+        response_raw = bytes_to_list(SER.readline())
+
+        # If response received, save it
+        if response_raw[0]:
+            # print(2, response_raw[0])     # debug only
+            responses = response_raw
+            # print(3, responses[0])    # debug only
+            time_rx = datetime.now().strftime("%H:%M:%S")
+
+        time.sleep(0.5)
+
+def transmit(data):
+    if SIMULATE:
+        transmitNetwork(data)
+    else:
+        transmitSerial(data)
+
+def bytes_to_list(msg):
+    if SIMULATE:
+        num_responses = int(len(msg)/8)
+        data = struct.unpack("%sd" % str(num_responses), msg)
+        return data
+    else:
+        num_responses = int(len(msg)/8)
+        if num_responses:
+            unpackformat = "<" + num_responses*"f4x"
+            data = struct.unpack(unpackformat, msg)
+            return data
+
+### Simulate or Run a Rover ###
+SIMULATE = False
+
+
+
+
 
 class ObstacleAvoidance():
 
@@ -146,7 +229,8 @@ class ObstacleAvoidance():
 
             # check sensors, order: front -> front left -> back left -> front right -> back right
             for sensor in ['u1']: #['u0', 'u1', 'u2', 'u3', 'u4']:
-                self.sensor_reading(sensor)
+                # self.sensor_reading(sensor)
+                self.send_command(sensor)
 
             print('sensor dict', self.sensor_dict)
             # check if emergency stop needed
