@@ -24,14 +24,14 @@ class mazeLocalization():
                 self.mazeMap[label] = value 
 
     # get potential locations of current square
-    def get_location(self, orientations, neighbouring_squares=None):
+    def get_location(self, orientations, new_current_squares=None):
         '''
         input: 
             - list of wall readings at different orientations 
                 -- organized in counterclockwise direction starting from front ([front, left, back, right])
                 -- True = wall, False = no wall
                 -- ie. [False, True, True, True]
-            - list of neighbouring squares labels
+            - list of potential neighbouring squares labels
         output: list of potential locations in maze (ie. ['A2', 'B2'])
         '''
         # set current wall configuration as None
@@ -63,16 +63,22 @@ class mazeLocalization():
         # print('get_location function - wall_config: ', wall_config)
 
         # find all squares in map that have wall configuration
-        self.current_location = [k for k, v in self.mazeMap.items() if v == wall_config]
+        self.prev_loc = [k for k, v in self.mazeMap.items() if v == wall_config]
 
         # if neighbouring square is given and not in list, remove potential location
-        if neighbouring_squares != None:
-            for square in neighbouring_squares[0]:
-                for pot_loc in self.current_location:
+        if new_current_squares != None:
+            for square in new_current_squares[0]:
+                for pot_loc in self.prev_loc:
                     if square not in self.neighbours(pot_loc):
-                        self.current_location.remove(pot_loc)
+                        self.prev_loc.remove(pot_loc)
 
-        return self.current_location
+            self.curr_loc = self.neighbours(self.prev_loc[0])[0]
+            for square in self.curr_loc:
+                if square not in new_current_squares[0]:
+                    self.curr_loc.remove(square)
+            return self.prev_loc, self.curr_loc
+        else:
+            return self.prev_loc
 
     def neighbours(self, pot_loc):
         '''
@@ -97,6 +103,70 @@ class mazeLocalization():
         neighbouring_square_wall_configs.pop(pot_loc_index)
         
         return neighbouring_squares, neighbouring_square_wall_configs
+    
+    def find_direction(self, current_loc, prev_loc):
+        '''
+        input: current location label and previous location label
+        output: direction (N, E, S, W) that robot is facing
+            - N is top of maze
+        '''
+
+        self.direction = None
+
+        # compare y-axis lables
+        # if y_curr < y_prev, robot is travelling N
+        # if y_curr > y_prev, robot is travelling S
+        # if y_curr = y_prev, robot is travelling E/W
+        # if x_curr < x_prev, robot is travelling W
+        # if x_curr > x_prev, robot is travelling E
+        if ord(current_loc[0][0]) < ord(prev_loc[0][0]):
+            self.direction = 'N'
+
+        elif ord(current_loc[0]) > ord(prev_loc[0]):
+            self.direction = 'N'
+        
+        else:
+            if ord(current_loc[0][1]) < ord(prev_loc[0][1]):
+                self.direction = 'W'
+
+            else:
+                self.direction = 'E'
+                
+        return self.direction
+
+        
+    
+    # def bfs(self, des_loc):
+    #     '''
+    #     input: current location label and direction
+    #     output: shortest path to desired location
+    #     '''
+
+    #     # Maintain a queue of paths
+    #     queue = []
+
+    #     # Push the first path into the queue
+    #     queue.append([self.current_location])
+    #     while queue:
+
+    #         # Get the first path from the queue
+    #         path = queue.pop(0)
+
+    #         # Get the last node from the path
+    #         node = path[-1]
+
+    #         # Path found
+    #         if node == end:
+    #             return path
+
+    #         # Enumerate all adjacent nodes, construct a new path and push it into the queue
+    #         for adjacent in graph.get(node, []):
+    #             new_path = list(path)
+    #             new_path.append(adjacent)
+    #             queue.append(new_path)
+
+    #     print bfs(graph, '1', '11')
+
 
 ##############################################################################################
 
@@ -122,16 +192,16 @@ class mazeLocalization():
 Loc = mazeLocalization()
 
 # test 1
-current_test_wall_config1 = [False, True, True, True]
-front_test_wall_config1 = [False, True, False, True]
+test_wall_config1 = [False, True, True, True]
+test_wall_config2 = [False, True, False, True]
 
-current = Loc.get_location(current_test_wall_config1)
+current = Loc.get_location(test_wall_config1)
 print(current)
 for loc in current:
     print(loc, Loc.neighbours(loc))
-front_square = Loc.get_location(front_test_wall_config1)
+front_square = Loc.get_location(test_wall_config2)
 print(front_square)
-current = Loc.get_location(current_test_wall_config1, neighbouring_squares=front_square)
+current = Loc.get_location(test_wall_config1, neighbouring_squares=front_square)
 print(current) # should return 'D8'
 
 # # test 2
