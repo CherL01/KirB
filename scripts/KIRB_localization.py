@@ -121,18 +121,18 @@ class mazeLocalization():
 
 Loc = mazeLocalization()
 
-# # test 1
-# current_test_wall_config1 = [False, True, True, True]
-# front_test_wall_config1 = [False, True, False, True]
+# test 1
+current_test_wall_config1 = [False, True, True, True]
+front_test_wall_config1 = [False, True, False, True]
 
-# current = Loc.get_location(current_test_wall_config1)
-# print(current)
-# for loc in current:
-#     print(loc, Loc.neighbours(loc))
-# front_square = Loc.get_location(front_test_wall_config1)
-# print(front_square)
-# current = Loc.get_location(current_test_wall_config1, neighbouring_squares=front_square)
-# print(current) # should return 'D8'
+current = Loc.get_location(current_test_wall_config1)
+print(current)
+for loc in current:
+    print(loc, Loc.neighbours(loc))
+front_square = Loc.get_location(front_test_wall_config1)
+print(front_square)
+current = Loc.get_location(current_test_wall_config1, neighbouring_squares=front_square)
+print(current) # should return 'D8'
 
 # # test 2
 # current_test_wall_config2 = [True, True, False, False]
@@ -147,27 +147,27 @@ Loc = mazeLocalization()
 # current = Loc.get_location(current_test_wall_config2, neighbouring_squares=back_square)
 # print(current) # should return 'B4'
 
-wall_configs = [
-    [2, 1, 3, 2, math.inf, 4, math.inf, 4],
-    [1, 2, math.inf, 2, 3, 0, 3, 1],
-    [3, math.inf, 4, math.inf, math.inf, 3, math.inf, 3],
-    [2, 3, 1, 3, 3, 2, math.inf, 4]
-]
+# wall_configs = [
+#     [2, 1, 3, 2, math.inf, 4, math.inf, 4],
+#     [1, 2, math.inf, 2, 3, 0, 3, 1],
+#     [3, math.inf, 4, math.inf, math.inf, 3, math.inf, 3],
+#     [2, 3, 1, 3, 3, 2, math.inf, 4]
+# ]
 
-wall_readings = []
-for row in wall_configs:
-    for column in row:
+# wall_readings = []
+# for row in wall_configs:
+#     for column in row:
         
         
             
 
 
-for row in wall_configs:
-    for column in row:
-        if column != math.inf:
-            if column == 4:
-                wall_readings = []
-            current = Loc.get_location(wall_readings)
-            while len(current) > 1:
-                right_square = wall_configs[row][column+1]
+# for row in wall_configs:
+#     for column in row:
+#         if column != math.inf:
+#             if column == 4:
+#                 wall_readings = []
+#             current = Loc.get_location(wall_readings)
+#             while len(current) > 1:
+#                 right_square = wall_configs[row][column+1]
                     
