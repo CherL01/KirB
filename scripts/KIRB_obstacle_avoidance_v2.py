@@ -8,14 +8,11 @@ import _thread
 from datetime import datetime
 # from KIRB_localization import mazeLocalization
 
-COM_PORT = 'COM3'
-ser = serial.Serial(COM_PORT, 9600, timeout=0) 
-
-def write_read(x):
-    ser.write(bytes(x, 'utf-8'))
-    time.sleep(2.5)
-    data = ser.readline().strip().decode('ascii')
-    return data
+# def write_read(x):
+#     ser.write(bytes(x, 'utf-8'))
+#     time.sleep(2.5)
+#     data = ser.readline().strip().decode('ascii')
+#     return data
 
 def transmitNetwork(data):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -59,11 +56,11 @@ def receiveSerial():
 
     while True:
         # If responses are ascii characters, use this
-        # response_raw = (SER.readline().strip().decode('ascii'),)
+        response_raw = (ser.readline().strip().decode('ascii'),)
         # print(1, response_raw)    # debug only
 
         # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
-        response_raw = bytes_to_list(SER.readline())
+        # response_raw = bytes_to_list(ser.readline())
 
         # If response received, save it
         if response_raw[0]:
@@ -95,9 +92,17 @@ def bytes_to_list(msg):
 ### Simulate or Run a Rover ###
 SIMULATE = False
 
+# ### Network Setup ###
+HOST = '127.0.0.1'  # The server's hostname or IP address
+PORT_TX = 61200     # The port used by the *CLIENT* to receive
+PORT_RX = 61201     # The port used by the *CLIENT* to send data
 
+COM_PORT = 'COM6'
+ser = serial.Serial(COM_PORT, 9600, timeout=0) 
+Thread(target = receiveSerial, daemon=True).start()
 
-
+responses = [False]
+time_rx = 'Never'
 
 class ObstacleAvoidance():
 
@@ -339,10 +344,7 @@ class ObstacleAvoidance():
 
 
 
-# ### Network Setup ###
-# HOST = '127.0.0.1'  # The server's hostname or IP address
-# PORT_TX = 61200     # The port used by the *CLIENT* to receive
-# PORT_RX = 61201     # The port used by the *CLIENT* to send data
+
 
 # # Received responses
 # responses = [False]

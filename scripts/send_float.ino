@@ -42,7 +42,7 @@ void loop() {
     // s = Serial.readString();
     // Serial.println(s);
 
-    // Transmit a floating point number
-	  // Serial.write(b, 8);
+    // Transmit a floating point number (use this!)
+	  Serial.write(b, 8);
   }
 }
