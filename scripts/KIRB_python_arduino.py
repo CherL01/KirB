@@ -1,23 +1,82 @@
 import serial
 import time
 
+class PyArduino:
+    def __init__(self, com_port, baud_rate = 9600, timeout = 0.1, keep_all = True, mode = 'FIFO', msg_delim = "\n") -> None:
+        ''' A class that creates a non blocking read write interface with the arduino
 
-COM_PORT = 'COM3'
-ser = serial.Serial(COM_PORT, 9600, timeout=0) 
+        com_port -> str:
+            String for the COM port, example "COM9"
+        baud_rate -> int:
+            (default 9600) Explained in PySerial
+        timeout -> float:
+            (default 0.1) Timeout for if serial object is used for readlines
+        keep_all -> bool:
+            (default True) Whether to save stuff in all_msgs_rec and all_msgs_sent
+        mode -> str:
+            (default FIFO) Mode for receiving messages. Choose from FIFO and LIFO
+        msg_delim -> str:
+            (default "\n") delimiter for end of message
+        '''
+        self.msg_buffer = ""
+        self.msgs = []
+        self.all_msgs_rec = []
+        self.all_msgs_sent = []
+        self.keep_all = keep_all
+        self.mode = mode
+        self.msg_delim = msg_delim
+        # initialize serial connection with the arduino, 3 second timeout to make sure nothing breaks
+        self.ser = serial.Serial(com_port, baud_rate, timeout=timeout)
+        time.sleep(3)
+        
 
-def write_read(x):
-    ser.write(bytes(x, 'utf-8'))
-    time.sleep(3)
-    data = ser.readline().strip().decode('ascii')
-    return data
+    def write(self, msg):
+        ''' writes msg to serial port, keeps messages in all_msgs_sent if keep_all = True '''
+        self.ser.write(bytes(msg, 'ascii'))
+        if self.keep_all:
+            self.all_msgs_sent.append(msg)
 
-for c in ['test command', 'u', 'w', 'r', 'u', 'u', 'r', 'w']: # 'test command' 
-    print('command: ', c)
-    command = c
-    value = write_read(command)
-    print('returned value: ', value) 
+    def pop_read(self):
+        ''' Reads messages from serial port if there is a reading, keeps all messages in all_msg_rec'''
+        if (self.ser.in_waiting > 0):
+            data = self.ser.read(self.ser.in_waiting).decode('ascii')
+            self.msg_buffer = self.msg_buffer + data
+            if self.msg_delim in self.msg_buffer:
+                split_buf = self.msg_buffer.split(self.msg_delim)
+                msg_rec = split_buf.pop(0)
+                self.msg_buffer = self.msg_delim.join(split_buf)
+
+                self.msgs.append(msg_rec)
+                self.all_msgs_rec.append(msg_rec)
+
+        if self.msgs:
+            if self.mode == "FIFO":
+                return self.msgs.pop(0)
+            elif self.mode == "LIFO":
+                return self.msgs.pop(-1)
+            else:
+                raise ValueError(f"MODE '{self.mode}' NOT SUPPORTED")
+        return None
     
-# from KIRB_obstacle_avoidance_v2 import ObstacleAvoidance
+    def blocking_read(self):
+        '''Blocking Read for testing'''
+        while True:
+            reading = self.pop_read()
+            if reading is not None:
+                return reading
+
+if __name__ == "__main__":
+    arduino = PyArduino(com_port="COM9")
+    while True:
+        inp = input("Give a command via keyboard\n")
+        start = time.time()
+        arduino.write(inp)
+        print("Waiting for Arduino Output:")
+        print(arduino.blocking_read())
+        print("Output finished")
+        print(f"Time taken: {time.time() - start}")
+
+# from KIRB_ob"stacle_avoidance_v2 import ObstacleAvoidance
 
 # # OA = ObstacleAvoidance()
 # RUNNING = True
