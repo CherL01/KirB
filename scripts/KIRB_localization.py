@@ -67,11 +67,14 @@ class mazeLocalization():
 
         # if neighbouring square is given and not in list, remove potential location
         if new_current_squares != None:
+            print('NEW CURR SQUARE', new_current_squares)
             for square in new_current_squares[0]:
                 for pot_loc in self.prev_loc:
-                    if square not in self.neighbours(pot_loc):
+                    if pot_loc not in self.neighbours(square):
+                        print(square)
+                        print(self.prev_loc)
                         self.prev_loc.remove(pot_loc)
-
+            print('PREV', self.prev_loc)
             self.curr_loc = self.neighbours(self.prev_loc[0])[0]
             for square in self.curr_loc:
                 if square not in new_current_squares[0]:
@@ -191,31 +194,31 @@ class mazeLocalization():
 
 Loc = mazeLocalization()
 
-# test 1
-test_wall_config1 = [False, True, True, True]
-test_wall_config2 = [False, True, False, True]
+# # test 1
+# test_wall_config1 = [False, True, True, True]
+# test_wall_config2 = [False, True, False, True]
 
-current = Loc.get_location(test_wall_config1)
-print(current)
-for loc in current:
-    print(loc, Loc.neighbours(loc))
-front_square = Loc.get_location(test_wall_config2)
-print(front_square)
-current = Loc.get_location(test_wall_config1, neighbouring_squares=front_square)
-print(current) # should return 'D8'
-
-# # test 2
-# current_test_wall_config2 = [True, True, False, False]
-# back_test_wall_config2 = [False, True, False, True]
-
-# current = Loc.get_location(current_test_wall_config2)
+# current = Loc.get_location(test_wall_config1)
 # print(current)
 # for loc in current:
 #     print(loc, Loc.neighbours(loc))
-# back_square = Loc.get_location(back_test_wall_config2)
-# print(back_square)
-# current = Loc.get_location(current_test_wall_config2, neighbouring_squares=back_square)
-# print(current) # should return 'B4'
+# front_square = Loc.get_location(test_wall_config2)
+# print(front_square)
+# current = Loc.get_location(test_wall_config1, new_current_squares=front_square)
+# print(current) # should return 'D8'
+
+# test 2
+test_wall_config3 = [False, False, True, True]
+test_wall_config4 = [False, True, False, True]
+
+current = Loc.get_location(test_wall_config3)
+print(current)
+for loc in current:
+    print(loc, Loc.neighbours(loc))
+front_square = Loc.get_location(test_wall_config4)
+print(front_square)
+current = Loc.get_location(test_wall_config3, new_current_squares=front_square)
+print(current) # should return 
 
 # wall_configs = [
 #     [2, 1, 3, 2, math.inf, 4, math.inf, 4],
