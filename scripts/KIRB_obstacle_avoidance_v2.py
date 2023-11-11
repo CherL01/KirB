@@ -14,80 +14,87 @@ from datetime import datetime
 #     data = ser.readline().strip().decode('ascii')
 #     return data
 
-def transmitNetwork(data):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.connect((HOST, PORT_TX))
-            s.send(data.encode('utf-8'))
-        except (ConnectionRefusedError, ConnectionResetError):
-            print('Tx Connection was refused or reset.')
-            _thread.interrupt_main()
-        except TimeoutError:
-            print('Tx socket timed out.')
-            _thread.interrupt_main()
-        except EOFError:
-            print('\nKeyboardInterrupt triggered. Closing...')
-            _thread.interrupt_main()
+# def transmitNetwork(data):
+#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#         try:
+#             s.connect((HOST, PORT_TX))
+#             s.send(data.encode('utf-8'))
+#         except (ConnectionRefusedError, ConnectionResetError):
+#             print('Tx Connection was refused or reset.')
+#             _thread.interrupt_main()
+#         except TimeoutError:
+#             print('Tx socket timed out.')
+#             _thread.interrupt_main()
+#         except EOFError:
+#             print('\nKeyboardInterrupt triggered. Closing...')
+#             _thread.interrupt_main()
 
-def receiveNetwork():
-    global responses
-    global time_rx
-    while True:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
-            try:
-                s2.connect((HOST, PORT_RX))
-                response_raw = s2.recv(1024)
-                if response_raw:
-                    responses = bytes_to_list(response_raw)
-                    time_rx = datetime.now().strftime("%H:%M:%S")
-            except (ConnectionRefusedError, ConnectionResetError):
-                print('Rx connection was refused or reset.')
-                _thread.interrupt_main()
-            except TimeoutError:
-                print('Response not received from robot.')
-                _thread.interrupt_main()
+# def receiveNetwork():
+#     global responses
+#     global time_rx
+#     while True:
+#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
+#             try:
+#                 s2.connect((HOST, PORT_RX))
+#                 response_raw = s2.recv(1024)
+#                 if response_raw:
+#                     responses = bytes_to_list(response_raw)
+#                     time_rx = datetime.now().strftime("%H:%M:%S")
+#             except (ConnectionRefusedError, ConnectionResetError):
+#                 print('Rx connection was refused or reset.')
+#                 _thread.interrupt_main()
+#             except TimeoutError:
+#                 print('Response not received from robot.')
+#                 _thread.interrupt_main()
+
+# def bytes_to_list(msg):
+#     if SIMULATE:
+#         num_responses = int(len(msg)/8)
+#         data = struct.unpack("%sd" % str(num_responses), msg)
+#         return data
+#     else:
+#         num_responses = int(len(msg)/8)
+#         if num_responses:
+#             unpackformat = "<" + num_responses*"f4x"
+#             data = struct.unpack(unpackformat, msg)
+#             return data
 
 def transmitSerial(data):
-    ser.write(data.encode('ascii'))
+    print(data)
+    
+    # ser.write(data.encode('ascii'))
+    # ser.write(data.encode())
+    ser.write(bytes(data, 'utf-8'))        # cherry's
+    time.sleep(1)
 
 def receiveSerial():
     global responses
     global time_rx
-
-    while True:
+    responses = ser.readline().strip().decode('ascii')
+    time.sleep(0.5)
+    
+    # while True:
         # If responses are ascii characters, use this
-        response_raw = (ser.readline().strip().decode('ascii'),)
+        
+        
+        # response_raw = ser.readline().strip().decode('ascii')
+        # response_raw = ser.readline()                         # debug
         # print(1, response_raw)    # debug only
 
         # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
         # response_raw = bytes_to_list(ser.readline())
 
         # If response received, save it
-        if response_raw[0]:
-            # print(2, response_raw[0])     # debug only
-            responses = response_raw
-            # print(3, responses[0])    # debug only
-            time_rx = datetime.now().strftime("%H:%M:%S")
+        # if response_raw[0]:
+        #     # print(2, response_raw[0])     # debug only
+        #     responses = response_raw
+        #     # print(3, responses[0])    # debug only
+        #     time_rx = datetime.now().strftime("%H:%M:%S")
 
-        time.sleep(0.5)
+        
 
 def transmit(data):
-    if SIMULATE:
-        transmitNetwork(data)
-    else:
-        transmitSerial(data)
-
-def bytes_to_list(msg):
-    if SIMULATE:
-        num_responses = int(len(msg)/8)
-        data = struct.unpack("%sd" % str(num_responses), msg)
-        return data
-    else:
-        num_responses = int(len(msg)/8)
-        if num_responses:
-            unpackformat = "<" + num_responses*"f4x"
-            data = struct.unpack(unpackformat, msg)
-            return data
+    transmitSerial(data)
 
 ### Simulate or Run a Rover ###
 SIMULATE = False
@@ -97,12 +104,17 @@ HOST = '127.0.0.1'  # The server's hostname or IP address
 PORT_TX = 61200     # The port used by the *CLIENT* to receive
 PORT_RX = 61201     # The port used by the *CLIENT* to send data
 
-COM_PORT = 'COM6'
-ser = serial.Serial(COM_PORT, 9600, timeout=0) 
-Thread(target = receiveSerial, daemon=True).start()
+COM_PORT = 'COM7'
+# ser = serial.Serial(COM_PORT, 9600, timeout=0) 
+# Thread(target = receiveSerial, daemon=True).start()
 
-responses = [False]
-time_rx = 'Never'
+# Create tx and rx threads
+ser = serial.Serial(COM_PORT, 9600, timeout=0)
+Thread(target = receiveSerial, daemon = True).start()
+    
+# responses = [False]
+# time_rx = 'Never'
+time.sleep(2)
 
 class ObstacleAvoidance():
 
@@ -147,6 +159,7 @@ class ObstacleAvoidance():
             transmitSerial('xx')
             self.RUNNING = False
             print("Emergency stop!")
+        
 
         #### might change code to move away from closest wall instead of stopping ####
 
@@ -167,10 +180,18 @@ class ObstacleAvoidance():
         # self.sensor_dict[sensor_label] = responses[0]
         # print('RESPONSES', responses)
         
-        ser.write(bytes(command, 'utf-8'))
-        time.sleep(2.5)
-        reading = ser.readline().strip().decode('ascii') 
-        print(reading)
+        # need to send " ua" to get sensor readings (stuck on this part!)
+        
+        # ser.write(bytes(command, 'utf-8'))
+        # time.sleep(2.5)
+        # reading = ser.readline().strip().decode('ascii') 
+        # print(reading)
+        
+        transmit(command)
+        time.sleep(1.5)
+        receiveSerial()
+        reading = responses                             # list
+        print(f"Sensor readings: {reading}")
         
         sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
         print(sensor_readings)
@@ -178,6 +199,8 @@ class ObstacleAvoidance():
         for i in range(len(sensor_readings)-1):
             self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
 
+        # for i in range(len(reading)-1):
+        #     self.sensor_dict[self.sensor_label_list[i]] = reading[i]
         
         self.frontSensor = self.sensor_dict['u0']
         self.leftFrontSensor = self.sensor_dict['u1']
@@ -187,7 +210,6 @@ class ObstacleAvoidance():
         
         self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
         
-
         return self.sensor_dict
     
     def sensor_diff(self):
@@ -224,22 +246,24 @@ class ObstacleAvoidance():
         '''
 
         # initial command - not registered
-        transmitSerial(' r0-90')
+        # transmitSerial(' r0-90')
 
-        #start by rotating 90 degrees (test)
-        transmitSerial(' r0-90')
-        time.sleep(0.5)
+        # start by rotating 90 degrees (test)
+        # transmitSerial(' r0-90')
+        time.sleep(0.2)
 
         while (self.RUNNING == True): # (self.PARALLEL == False) 
 
             # check sensors, order: front -> front left -> back left -> front right -> back right
-            for sensor in ['u1']: #['u0', 'u1', 'u2', 'u3', 'u4']:
+            for sensor in [' ua']: #[' ua',' u0', ' u1', ' u2', ' u3', ' u4']:
                 # self.sensor_reading(sensor)
                 self.send_command(sensor)
 
             print('sensor dict', self.sensor_dict)
             # check if emergency stop needed
             self.emergency_stop()
+            if (self.RUNNING == False):
+                break
 
             # ROVER IS NOT PARALLEL
             self.sensor_diff()

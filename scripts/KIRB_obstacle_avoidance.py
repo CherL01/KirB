@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # and https://www.geeksforgeeks.org/python-display-text-to-pygame-window/
 
 import socket
+import serial
 import struct
 import time
 import math
@@ -29,44 +30,52 @@ from threading import Thread
 import _thread
 from datetime import datetime
 
-def transmit(data):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        try:
-            s.connect((HOST, PORT_TX))
-            s.send(data.encode('utf-8'))
-        except (ConnectionRefusedError, ConnectionResetError):
-            print('Tx Connection was refused or reset.')
-            _thread.interrupt_main()
-        except TimeoutError:
-            print('Tx socket timed out.')
-            _thread.interrupt_main()
-        except EOFError:
-            print('\nKeyboardInterrupt triggered. Closing...')
-            _thread.interrupt_main()
+# def transmitSerial(data):
+#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#         try:
+#             s.connect((HOST, PORT_TX))
+#             s.send(data.encode('utf-8'))
+#         except (ConnectionRefusedError, ConnectionResetError):
+#             print('Tx Connection was refused or reset.')
+#             _thread.interrupt_main()
+#         except TimeoutError:
+#             print('Tx socket timed out.')
+#             _thread.interrupt_main()
+#         except EOFError:
+#             print('\nKeyboardInterrupt triggered. Closing...')
+#             _thread.interrupt_main()
+    
+# def receive():
+#     global responses
+#     global time_rx
+#     while True:
+#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
+#             try:
+#                 s2.connect((HOST, PORT_RX))
+#                 response_raw = s2.recv(1024)
+#                 if response_raw:
+#                     responses = bytes_to_list(response_raw)
+#                     time_rx = datetime.now().strftime("%H:%M:%S")
+#             except (ConnectionRefusedError, ConnectionResetError):
+#                 print('Rx connection was refused or reset.')
+#                 _thread.interrupt_main()
+#             except TimeoutError:
+#                 print('Response not received from robot.')
+#                 _thread.interrupt_main()
 
-def receive():
+# def bytes_to_list(msg):
+#     num_responses = int(len(msg)/8)
+#     data = struct.unpack("%sd" % str(num_responses), msg)
+#     return data
+
+def transmitSerial(data):
+    ser.write(data.encode())
+
+def receiveSerial():
     global responses
-    global time_rx
-    while True:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
-            try:
-                s2.connect((HOST, PORT_RX))
-                response_raw = s2.recv(1024)
-                if response_raw:
-                    responses = bytes_to_list(response_raw)
-                    time_rx = datetime.now().strftime("%H:%M:%S")
-            except (ConnectionRefusedError, ConnectionResetError):
-                print('Rx connection was refused or reset.')
-                _thread.interrupt_main()
-            except TimeoutError:
-                print('Response not received from robot.')
-                _thread.interrupt_main()
-
-def bytes_to_list(msg):
-    num_responses = int(len(msg)/8)
-    data = struct.unpack("%sd" % str(num_responses), msg)
-    return data
-
+    responses = ser.readline().strip().decode('ascii')
+    print(responses)
+    time.sleep(0.5)
 
 ### Network Setup ###
 HOST = '127.0.0.1'  # The server's hostname or IP address
@@ -78,7 +87,9 @@ responses = [False]
 time_rx = 'Never'
 
 # Create tx and rx threads
-Thread(target = receive, daemon = True).start()
+COM_PORT = 'COM7'
+ser = serial.Serial(COM_PORT, 9600, timeout=0)
+Thread(target = receiveSerial, daemon = True).start()
 
 # Run the sequence of commands
 RUNNING = True
@@ -97,14 +108,14 @@ sensorDifferenceLimit = 0.15
 eStopLimit = 1.25
 
 #start by rotating 90 degrees (test)
-transmit('r0-90')
+transmitSerial('r0-90')
 time.sleep(0.5)
 
 ct = 0
 while RUNNING:
     
     # check front sensor
-    transmit('u0')
+    transmitSerial('u0')
     time.sleep(0.08)
     print(f"Ultrasonic FRONT reading: {round(responses[0], 3)}")
     frontSensor = responses[0]
@@ -112,29 +123,29 @@ while RUNNING:
     if frontSensor < eStopLimit:
         RUNNING = False
         print("Emergency stop!")
-        transmit('xx')
+        transmitSerial('xx')
         break
     
     # check left front sensor
-    transmit('u1')
+    transmitSerial('u1')
     time.sleep(0.08)
     print(f"Ultrasonic FRONT-LEFT reading: {round(responses[0], 3)}")
     leftFrontSensor = responses[0]
 
     # check left back sensor
-    transmit('u2')
+    transmitSerial('u2')
     time.sleep(0.08)
     print(f"Ultrasonic BACK-LEFT reading: {round(responses[0], 3)}")
     leftBackSensor = responses[0]
     
     # check right front sensor
-    transmit('u3')
+    transmitSerial('u3')
     time.sleep(0.08)
     print(f"Ultrasonic FRONT-RIGHT reading: {round(responses[0], 3)}")
     rightFrontSensor = responses[0]
 
     # check right back sensor
-    transmit('u4')
+    transmitSerial('u4')
     time.sleep(0.08)
     print(f"Ultrasonic BACK-RIGHT reading: {round(responses[0], 3)}")
     rightBackSensor = responses[0]
@@ -142,7 +153,7 @@ while RUNNING:
     if leftBackSensor<eStopLimit or leftFrontSensor<eStopLimit or rightBackSensor<eStopLimit or rightFrontSensor<eStopLimit:
         RUNNING = False
         print("Emergency stop!")
-        transmit('xx')
+        transmitSerial('xx')
         break    
     
     # find difference between left sensors
@@ -166,28 +177,28 @@ while RUNNING:
             
             # front left is closest
             if closest==0:
-                transmit('r0-4')
+                transmitSerial('r0-4')
                 time.sleep(0.08)
                 #print("")
             # back left is closest
             elif closest==1:
-                transmit('r0--4')
+                transmitSerial('r0--4')
                 time.sleep(0.08)
                 #print("")
             # front right is closest
             elif closest==2:
-                transmit('r0--4')
+                transmitSerial('r0--4')
                 time.sleep(0.08)
                 #print("")
             # back right is closest
             elif closest==3:
-                transmit('r0-4')
+                transmitSerial('r0-4')
                 time.sleep(0.08)
                 #print("")
             
             # CONDITION #2: 3-way/4-way intersection (NOT AT WALL YET)
             if frontSensor>=2.5:
-                transmit('w0-1')
+                transmitSerial('w0-1')
                 time.sleep(0.08)
 
             # CONDITION #3: 3-way/4-way intersection (AT THE WALL)
@@ -201,7 +212,7 @@ while RUNNING:
                     # idk yet depends on where its going
                     
                 #placeholder move back 1 inch
-                transmit('w0--1')
+                transmitSerial('w0--1')
                 time.sleep(0.08)
 
     
@@ -212,13 +223,13 @@ while RUNNING:
             #if 
             if frontSensor >= 2.25:
                 # move forward 1 inch
-                transmit('w0-1')
+                transmitSerial('w0-1')
                 time.sleep(0.08)
             
             # rover is parallel, if less than 3, make a uturn
             elif frontSensor < 2.25:
                 
-                transmit('r0--90')
+                transmitSerial('r0--90')
                 time.sleep(0.08)
                 print("LEFT TURN")
         
@@ -228,14 +239,14 @@ while RUNNING:
             
             if frontSensor >= 2.25:
                 # move forward 1 inch
-                transmit('w0-1')
+                transmitSerial('w0-1')
                 time.sleep(0.08)
                 print("FORWARD ONE INCH")
             
             # rover is parallel, if less than 3, make a uturn
             elif frontSensor < 2.25:
                 
-                transmit('r0-90')
+                transmitSerial('r0-90')
                 time.sleep(0.08)
                 print("RIGHT TURN")
         
@@ -244,15 +255,15 @@ while RUNNING:
         
         if frontSensor>=2.25:
             # move forward 1 inch
-            transmit('w0-1')
+            transmitSerial('w0-1')
             time.sleep(0.08)
             print("rOVER PARALLEL. FORWARD ONE INCH.")
         elif frontSensor < 2.25:
             if leftFrontSensor > rightFrontSensor:
-                transmit('r0--90')
+                transmitSerial('r0--90')
                 time.sleep(0.08)
             elif leftFrontSensor < rightFrontSensor:
-                transmit('r0-90')
+                transmitSerial('r0-90')
                 time.sleep(0.08)
             
             
