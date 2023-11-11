@@ -23,6 +23,59 @@ class mazeLocalization():
             for label, value in zip(l, c):
                 self.mazeMap[label] = value 
 
+        # square dimension (inches)
+        self.squareDim = 12
+
+        # tolerance for sensor readings (CAN CHANGE)
+        self.sensorTolerance = 2
+    
+    def theoretical_sensor_readings(self, square_label, heading):
+        '''
+        input: square label, heading (direction: N, S, E, W)
+        output: theoretical sensor readings (F, L, B, R)
+        '''
+
+        # get coordinate of square
+        for row in self.mazeLabels:
+            if square_label in row:
+                y, x = self.mazeLabels.index(row), row.index(square_label)
+                break
+        
+        # set up potential movement directions and theoretical values list
+        movement_directon = ['F', 'L', 'B', 'R']
+        theoretical_values = []
+
+        # recursively find theoretical sensor readings for each movement direction
+        for d in movement_directon:
+
+            # start with current square and a direction, travel one square until we hit a wall
+            # calculate how many loops (squares) before hitting a wall
+            current_loc = square_label
+            num_loops = 0
+            while True:
+                new_loc, _ = self.make_movement(current_loc, heading, d, turn=False)
+                num_loops += 1
+
+                if new_loc == None:
+                    break
+
+                current_loc = new_loc
+            
+            # multiply number of squares by distance to get theoretical reading
+            # added sensor tolerance for extra distance since measurement from sensor isnt directly on the edge of a square
+            theoretical_values.append(num_loops * self.squareDim + self.sensorTolerance)
+
+        return theoretical_values
+
+    
+    def square_prob(self, f_sensor, l_sensor, b_sensor, r_sensor):
+        '''
+        input: sensor readings (F, L, B, R)
+        output: (list of potential squares labels, list of probabilities)
+        '''
+
+        
+
     # get potential locations of current square
     def get_location(self, orientations, new_current_squares=None):
         '''
