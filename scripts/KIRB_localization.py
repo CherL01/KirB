@@ -8,10 +8,10 @@ class mazeLocalization():
     def __init__(self):
         
         # maze labels
-        self.mazeLabels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
+        self.maze_labels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
         
         # maze wall configurations
-        self.wallConfigs = [
+        self.wall_configs = [
             [2, 1, 3, 2, math.inf, 4, math.inf, 4],
             [1, 2, math.inf, 2, 3, 0, 3, 1],
             [3, math.inf, 4, math.inf, math.inf, 3, math.inf, 3],
@@ -19,10 +19,10 @@ class mazeLocalization():
         ]
 
         # dict mapping maze labels with wall configurations
-        self.mazeMap = {}
-        for l, c in zip(self.mazeLabels, self.wallConfigs):
+        self.maze_map = {}
+        for l, c in zip(self.maze_labels, self.wall_configs):
             for label, value in zip(l, c):
-                self.mazeMap[label] = value 
+                self.maze_map[label] = value 
 
         # maze labels <-> coordinates
         mazeLabels_flat = [f'{y}{x}' for x in range(1, 9) for y in ['A', 'B', 'C', 'D']]
@@ -30,13 +30,13 @@ class mazeLocalization():
         self.coords_y_x2labels = {coord: label for label, coord in self.labels2coords_y_x.items()}
         
         # square dimension (inches)
-        self.squareDim = 12
+        self.square_dim = 12
 
         # tolerance for sensor readings (CAN CHANGE)
-        self.sensorTolerance = 2
+        self.sensor_tolerance = 2
 
         # limit for wall detection
-        self.wallLimit = 4
+        self.wall_limit = 4
 
         # sensor noise
         self.sensor_noise = 2
@@ -100,7 +100,7 @@ class mazeLocalization():
         new_loc = self.coords_y_x2labels[(new_y, new_x)]
 
         # wall, return None
-        if math.isinf(self.mazeMap[new_loc]):
+        if math.isinf(self.maze_map[new_loc]):
             return None, None
         
         new_heading = heading
@@ -127,9 +127,9 @@ class mazeLocalization():
         '''
 
         # get coordinate of square
-        for row in self.mazeLabels:
+        for row in self.maze_labels:
             if square_label in row:
-                y, x = self.mazeLabels.index(row), row.index(square_label)
+                y, x = self.maze_labels.index(row), row.index(square_label)
                 break
         
         # set up potential movement directions and theoretical values list
@@ -154,7 +154,7 @@ class mazeLocalization():
             
             # multiply number of squares by distance to get theoretical reading
             # added sensor tolerance for extra distance since measurement from sensor isnt directly on the edge of a square
-            theoretical_values.append(num_loops * self.squareDim + self.sensorTolerance)
+            theoretical_values.append(num_loops * self.square_dim + self.sensor_tolerance)
 
         return theoretical_values
     
@@ -167,7 +167,7 @@ class mazeLocalization():
         '''
 
         # check wall locations
-        wall_locs = [1 if sensor_value <= self.wallLimit else 0 for sensor_value in sensor_readings]
+        wall_locs = [1 if sensor_value <= self.wall_limit else 0 for sensor_value in sensor_readings]
 
         # case 1: one wall at F (wall config = 1)
         # potential squares: B8, D3 ; A2, B1 (loading zone)
@@ -305,7 +305,7 @@ class mazeLocalization():
     #     # print('get_location function - wall_config: ', wall_config)
 
     #     # find all squares in map that have wall configuration
-    #     self.prev_loc = [k for k, v in self.mazeMap.items() if v == wall_config]
+    #     self.prev_loc = [k for k, v in self.maze_map.items() if v == wall_config]
 
     #     # if neighbouring square is given and not in list, remove potential location
     #     if new_current_squares != None:
@@ -331,14 +331,14 @@ class mazeLocalization():
     #     return: list of neighbouring squares, list of corresponding wall configurations
     #     '''
     #     # get coordinate of potential location
-    #     for row in self.mazeLabels:
+    #     for row in self.maze_labels:
     #         if pot_loc in row:
-    #             y, x = self.mazeLabels.index(row), row.index(pot_loc)
+    #             y, x = self.maze_labels.index(row), row.index(pot_loc)
 
     #     # find neighbouring squares
-    #     neighbouring_squares = [self.mazeLabels[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.mazeLabels)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.mazeLabels[0])-1 else x + 1)]
+    #     neighbouring_squares = [self.maze_labels[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.maze_labels)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.maze_labels[0])-1 else x + 1)]
     #     # find neighbouring square wall configurations
-    #     neighbouring_square_wall_configs = [self.wallConfigs[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.wallConfigs)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.wallConfigs[0])-1 else x + 1)]
+    #     neighbouring_square_wall_configs = [self.wall_configs[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.wall_configs)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.wall_configs[0])-1 else x + 1)]
 
     #     # find index of potential location in neighbouring squares
     #     pot_loc_index = neighbouring_squares.index(pot_loc)
