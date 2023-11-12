@@ -9,6 +9,9 @@ class MazeLocalization():
 
         # initialize that robot is not localized
         self.localized = False
+
+        # initialize that robot is on the initial square of localization
+        self.initial = True
         
         # maze labels
         self.maze_labels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
@@ -32,9 +35,10 @@ class MazeLocalization():
         self.labels2coords_y_x = {label: coord for label, coord in zip(mazeLabels_flat, [(y, x) for x in range(8) for y in range(4)])}
         self.coords_y_x2labels = {coord: label for label, coord in self.labels2coords_y_x.items()}
         
-        # initialize current location
+        # initialize current location, coordinates, and potential square heading pairs
         self.current_location = None
         self.current_location_coords = None
+        self.square_heading_pairs = None
         
         # square dimension (inches)
         self.square_dim = 12
@@ -162,7 +166,7 @@ class MazeLocalization():
     def potential_square_heading_pairs(self, sensor_readings):
         '''
         input: list of sensor readings (F, L, B, R)
-        output: list of potential squares labels, their respective headings (N, S, E, W), if rotation is required
+        output: list of tuples of potential squares labels and their respective headings (N, S, E, W), if rotation is required
 
         note: this function is for initial conditions ONLY (after robot travels to a wall to ensure that it is in a square)
         '''
@@ -197,7 +201,9 @@ class MazeLocalization():
             potential_squares = ['A6', 'A8', 'C3', 'D8']
             headings = ['N', 'N', 'N', 'S']
 
-        return potential_squares, headings, rotate
+        square_heading_pairs = zip(potential_squares, headings)
+
+        return square_heading_pairs, rotate
             
     def gaussian_prob(self, mu, sigma, x):
         '''
@@ -209,13 +215,13 @@ class MazeLocalization():
 
     def square_prob(self, sensor_readings, square_heading_pairs):
         '''
-        input: list of sensor readings (F, L, B, R), list of potential squares labels and their respective headings
-        output: list of corresponding probabilities
+        input: list of sensor readings (F, L, B, R), list of tuples of potential squares labels and their respective headings
+        output: list of reordered square heading pairs (in descending probability), list of corresponding probabilities
         '''
 
         probs = []
 
-        # calculate gaussian probability for each sensor reading
+        # calculate gaussian probability for each potential square
         for square, heading in square_heading_pairs:
             t_values = self.theoretical_sensor_readings(square, heading)
             w = 1.
@@ -223,25 +229,55 @@ class MazeLocalization():
                 w *= self.gaussian_prob(t, self.sensor_noise, s)
             probs.append(w + 1.e-300)
 
-        return probs
+        pairs_w_probs = sorted(zip(square_heading_pairs, probs), key=lambda x:x[1], reverse=True)
+
+        square_heading_pairs_reordered, probs_reordered = list(zip(*pairs_w_probs))
+
+        return square_heading_pairs_reordered, probs_reordered
     
-    def prob_after_moving(self):
+    def prob_after_moving(self, movement, sensor_readings_new, square_heading_pairs):
         '''
-        input: list of 
-        '''
-    
-    def get_location(self, square_heading_pairs, probabilities):
-        '''
-        input: list of square heading pairs, list of corresponding probabilities
-        output: square heading pair with highest probability
+        input: movement from robot, list of new sensor readings after robot moves, 
+            list of tuples of original potential squares labels and their respective headings
+        output: list of new square heading pairs, list of corresponding probabilities
         '''
 
-        # get index of the max probability
-        max_prob_index = probabilities.index(max(probabilities))
-        self.current_location = square_heading_pairs[max_prob_index][0]
-        self.current_location_coords = self.labels2coords_y_x[self.current_location]
+        # get new square heading pairs
+        new_square_heading_pairs = []
+        for square, heading in square_heading_pairs:
+            new_square, new_heading = self.make_movement(square, heading, movement, turn=True)
+            new_square_heading_pairs.append((new_square, new_heading))
 
-        return square_heading_pairs[max_prob_index]
+        probs = []
+        # calculate gaussian probability for each new square
+        for square, heading in new_square_heading_pairs:
+            if square != None:
+                t_values = self.theoretical_sensor_readings(square, heading)
+                w = 1.
+                for t, s in zip(t_values, sensor_readings_new):
+                    w *= self.gaussian_prob(t, self.sensor_noise, s)
+                probs.append(w + 1.e-300)
+            else: 
+                probs.append(1.e-300)
+
+        pairs_w_probs = sorted(zip(new_square_heading_pairs, probs), key=lambda x:x[1], reverse=True)
+
+        new_square_heading_pairs_reordered, probs_reordered = list(zip(*pairs_w_probs))
+
+        return new_square_heading_pairs_reordered, probs_reordered
+    
+    # def get_location(self, square_heading_pairs, probabilities):
+    #     '''
+    #     input: list of tuples of potential squares labels and their respective headings, list of corresponding probabilities
+    #     output: square heading pair with highest probability
+    #     '''
+
+    #     # get index of the max probability
+    #     max_prob_index = probabilities.index(max(probabilities))
+    #     self.current_location = square_heading_pairs[max_prob_index][0]
+    #     self.current_location_coords = self.labels2coords_y_x[self.current_location]
+
+    #     return square_heading_pairs[max_prob_index]
 
     def neighbours(self, square):
         '''
@@ -291,18 +327,69 @@ class MazeLocalization():
                     queue.append(path + [s])
                     seen.add(s)
 
+    def get_movement(self, sensor_readings):
+        '''
+        input: list of sensor readings
+        output: movement command
+        
+        note: this function gives the direction of the next square for the robot to move to for localization
+            (robot will move to the direction with the lowest sensor reading that's not an immediate wall)
+        '''
+
+        movements = ['F', 'L', 'B', 'R']
+        new_readings = [s - self.wall_limit for s in sensor_readings]
+        min_index = new_readings.index(min(new_readings))
+
+        return movements[min_index]
+    
     def localize(self, sensor_readings):
         '''
         input: sensor readings
-        output: True if robot localized (False otherwise), list of movements
+        output: True if robot localized (False otherwise), current location (s), list of movements to complete localization process
         '''
 
-        if self.localized == False:
+        # if robot is in inital square (3 initial localization cases)
+        if self.initial == True:
             # get square labels, headings, if rotation is required
-            square_labels, headings, rotation = self.potential_square_heading_pairs(sensor_readings)
+            square_heading_pairs, rotation = self.potential_square_heading_pairs(sensor_readings)
 
-        if rotation == True:
-            return False, ['right turn']
+            # if rotation is required, return rotation command to main script
+            if rotation == True:
+                return False, None, ['right turn']
+
+            # get probabilities for all potential square label and heading pairs
+            square_heading_pairs_reordered, square_probs = self.square_prob(sensor_readings, square_heading_pairs)
+            self.square_heading_pairs = square_heading_pairs_reordered
+
+            # set initial as False because will move from initial square
+            self.initial = False
+
+            # get movement command to continue localization
+            movement = self.get_movement(sensor_readings)
+
+            return False, self.square_heading_pairs, movement
+
+        # if robot is not localized
+        elif self.localized == False:
+
+            # get probabilities for new potential square label and heading pairs
+            movement = self.get_movement(sensor_readings)
+            new_square_heading_pairs_reordered, new_square_probs = self.prob_after_moving(movement, sensor_readings, self.square_heading_pairs)
+            self.square_heading_pairs = new_square_heading_pairs_reordered
+        
+            return True, self.square_heading_pairs[0], ['']
+
+        # robot is localized, continue to navigation
+        else:
+            
+            
+
+
+
+
+
+        
+
 
 
     # # get potential locations of current square
