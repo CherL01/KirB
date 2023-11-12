@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from sklearn.metrics import mean_absolute_percentage_error as mape
 
 class mazeLocalization():
 
@@ -23,11 +24,101 @@ class mazeLocalization():
             for label, value in zip(l, c):
                 self.mazeMap[label] = value 
 
+        # maze labels <-> coordinates
+        mazeLabels_flat = [f'{y}{x}' for x in range(1, 9) for y in ['A', 'B', 'C', 'D']]
+        self.labels2coords_y_x = {label: coord for label, coord in zip(mazeLabels_flat, [(y, x) for x in range(8) for y in range(4)])}
+        self.coords_y_x2labels = {coord: label for label, coord in self.labels2coords_y_x.items()}
+        
         # square dimension (inches)
         self.squareDim = 12
 
         # tolerance for sensor readings (CAN CHANGE)
         self.sensorTolerance = 2
+
+        # limit for wall detection
+        self.wallLimit = 4
+
+        # sensor noise
+        self.sensor_noise = 2
+    
+    def make_movement(self, current_loc, heading, mov_direction, turn = True):
+        """ 
+        input: current location, heading, movement direction, (turn) if heading should change 
+        output: new location, new heading; None if out of bounds or a wall
+
+        Returns new_location and new_heading of the car given the current location,
+        the direction the car is facing (N W S E), and the movement direction (F B L R)
+            
+        Assumes that the car turns for left and right movements, and keeps the same heading 
+        for front and back movements
+
+        Returns None for new_location and new_direction if the location is out of bounds or in a wall
+        """
+        
+        # movements if heading is north
+        if heading == "N":
+            y_x_movement = {"F": [-1, 0],
+                            "B": [1, 0],
+                            "L": [0, -1],
+                            "R": [0, 1],}
+
+        # movements if heading is west
+        elif heading == "W":
+            y_x_movement = {"F": [0, -1],
+                            "B": [0, 1],
+                            "L": [1, 0],
+                            "R": [-1, 0],}
+        
+        # movements if heading is south
+        elif heading == "S":
+            y_x_movement = {"F": [1, 0],
+                            "B": [-1, 0],
+                            "L": [0, 1],
+                            "R": [0, -1],}
+        
+        # movements if heading is east
+        elif heading == "E":
+            y_x_movement = {"F": [0, 1],
+                            "B": [0, -1],
+                            "L": [-1, 0],
+                            "R": [1, 0],}
+        
+        else:
+            raise ValueError()
+    
+        # get y, x movements and move accordingly
+        movement_Y, movement_X = y_x_movement[mov_direction]
+        current_Y, current_X = self.labels2coords_y_x[current_loc]
+
+        new_y = movement_Y + current_Y
+        new_x = movement_X + current_X
+
+        # out of bounds, return None
+        if (new_x >= 8) or (new_x < 0) or (new_y >= 4) or (new_y < 0):
+            return None, None
+        
+        new_loc = self.coords_y_x2labels[(new_y, new_x)]
+
+        # wall, return None
+        if math.isinf(self.mazeMap[new_loc]):
+            return None, None
+        
+        new_heading = heading
+
+        # determine new heading if turn is true
+        if turn is True:
+            headings = ["N", "W", "S", "E"]
+            idx = headings.index(heading)
+            if mov_direction == "L":
+                idx += 1
+            elif mov_direction == "R":
+                idx -= 1
+            else:
+                raise ValueError()
+            idx = idx % 4
+            new_heading = headings[idx]
+
+        return new_loc, new_heading
     
     def theoretical_sensor_readings(self, square_label, heading):
         '''
@@ -54,144 +145,95 @@ class mazeLocalization():
             num_loops = 0
             while True:
                 new_loc, _ = self.make_movement(current_loc, heading, d, turn=False)
-                num_loops += 1
 
                 if new_loc == None:
                     break
 
                 current_loc = new_loc
+                num_loops += 1
             
             # multiply number of squares by distance to get theoretical reading
             # added sensor tolerance for extra distance since measurement from sensor isnt directly on the edge of a square
             theoretical_values.append(num_loops * self.squareDim + self.sensorTolerance)
 
         return theoretical_values
-
     
-    def square_prob(self, f_sensor, l_sensor, b_sensor, r_sensor):
+    def potential_square_heading_pairs(self, sensor_readings):
         '''
-        input: sensor readings (F, L, B, R)
-        output: (list of potential squares labels, list of probabilities)
+        input: list of sensor readings (F, L, B, R)
+        output: list of potential squares labels and their respective headings (N, S, E, W)
+
+        note: this function is for initial conditions ONLY (after robot travels to a wall to ensure that it is in a square)
         '''
 
-        
+        # check wall locations
+        wall_locs = [1 if sensor_value <= self.wallLimit else 0 for sensor_value in sensor_readings]
 
-    # get potential locations of current square
-    def get_location(self, orientations, new_current_squares=None):
+        # case 1: one wall at F (wall config = 1)
+        # potential squares: B8, D3 ; A2, B1 (loading zone)
+        if sum(wall_locs) == 1:
+            potential_squares = ['B8', 'D3']
+            headings = ['E', 'S']
+
+        # case 2: two walls at F + L (wall config = 2)
+        # IF WALLS AT F + R, ROTATE RIGHT SO WALLS ARE AT F + L
+        # potential squares: A4, B4, D1, D6 ; A1, B2 (loading zone)
+        elif sum(wall_locs) == 2:
+
+            # if walls at F + R
+            if wall_locs[1] == True:
+                ### CODE FOR ROTATING ROBOT 90 DEG TO THE RIGHT ###
+                pass # delete later
+
+            potential_squares = ['A4', 'B4', 'D1', 'D6']
+            headings = ['E', 'W', 'W', 'S']
+
+        # case 3: three walls at F + L + R (wall config = 4)
+        # potential squares: A6, A8, C3, D8
+        elif sum(wall_locs) == 3:
+            potential_squares = ['A6', 'A8', 'C3', 'D8']
+            headings = ['N', 'N', 'N', 'S']
+
+        return potential_squares, headings
+            
+    def gaussian_prob(self, mu, sigma, x):
         '''
-        input: 
-            - list of wall readings at different orientations 
-                -- organized in counterclockwise direction starting from front ([front, left, back, right])
-                -- True = wall, False = no wall
-                -- ie. [False, True, True, True]
-            - list of potential neighbouring squares labels
-        output: list of potential locations in maze (ie. ['A2', 'B2'])
+        input: mu, sigma, x
+        output: probability of x for 1-dim Gaussian with mean mu and var sigma
         '''
-        # set current wall configuration as None
-        wall_config = None
 
-        # print('get_location function - orientation: ', orientations)
+        return math.exp( -((mu - x) ** 2) / (sigma ** 2) / 2.) / math.sqrt( 2. * math.pi * (sigma ** 2)) 
 
-        # True = wall in reading 
-        if True in orientations:
-            # sum of 1 = one wall in reading
-            if sum(orientations) == 1:
-                wall_config = 1
-            # sum of 2 = 2 walls in reading
-            elif sum(orientations) == 2:
-                indices = [i for i, x in enumerate(orientations) if x == True]
-                # if sum is even then walls are opposite
-                if sum(indices) % 2 == 1:
-                    wall_config = 2
-                # if sum is odd then walls are adjacent
-                else: 
-                    wall_config = 3
-            # sum of 3 = 3 walls in reading
-            else:
-                wall_config = 4
-        # False = no walls in reading
-        else:
-            wall_config = 0
-
-        # print('get_location function - wall_config: ', wall_config)
-
-        # find all squares in map that have wall configuration
-        self.prev_loc = [k for k, v in self.mazeMap.items() if v == wall_config]
-
-        # if neighbouring square is given and not in list, remove potential location
-        if new_current_squares != None:
-            print('NEW CURR SQUARE', new_current_squares)
-            for square in new_current_squares[0]:
-                for pot_loc in self.prev_loc:
-                    if pot_loc not in self.neighbours(square):
-                        print(square)
-                        print(self.prev_loc)
-                        self.prev_loc.remove(pot_loc)
-            print('PREV', self.prev_loc)
-            self.curr_loc = self.neighbours(self.prev_loc[0])[0]
-            for square in self.curr_loc:
-                if square not in new_current_squares[0]:
-                    self.curr_loc.remove(square)
-            return self.prev_loc, self.curr_loc
-        else:
-            return self.prev_loc
-
-    def neighbours(self, pot_loc):
+    def square_prob(self, sensor_readings, square_heading_pairs):
         '''
-        input: potential location label
-        return: list of neighbouring squares, list of corresponding wall configurations
+        input: list of sensor readings (F, L, B, R), list of potential squares labels and their respective headings
+        output: list of corresponding probabilities
         '''
-        # get coordinate of potential location
-        for row in self.mazeLabels:
-            if pot_loc in row:
-                y, x = self.mazeLabels.index(row), row.index(pot_loc)
 
-        # find neighbouring squares
-        neighbouring_squares = [self.mazeLabels[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.mazeLabels)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.mazeLabels[0])-1 else x + 1)]
-        # find neighbouring square wall configurations
-        neighbouring_square_wall_configs = [self.wallConfigs[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.wallConfigs)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.wallConfigs[0])-1 else x + 1)]
+        probs = []
 
-        # find index of potential location in neighbouring squares
-        pot_loc_index = neighbouring_squares.index(pot_loc)
-        
-        # remove potential location
-        neighbouring_squares.pop(pot_loc_index)
-        neighbouring_square_wall_configs.pop(pot_loc_index)
-        
-        return neighbouring_squares, neighbouring_square_wall_configs
+        # calculate gaussian probability for each sensor reading
+        for square, heading in square_heading_pairs:
+            t_values = self.theoretical_sensor_readings(square, heading)
+            w = 1.
+            for t, s in zip(t_values, sensor_readings):
+                w *= self.gaussian_prob(t, self.sensor_noise, s)
+            probs.append(w + 1.e-300)
+
+        return probs
     
-    def find_direction(self, current_loc, prev_loc):
+    def get_location(self, square_heading_pairs, probabilities):
         '''
-        input: current location label and previous location label
-        output: direction (N, E, S, W) that robot is facing
-            - N is top of maze
+        input: list of square heading pairs, list of corresponding probabilities
+        output: square heading pair with highest probability
         '''
 
-        self.direction = None
+        # get index of the max probability
+        max_prob_index = probabilities.index(max(probabilities))
 
-        # compare y-axis lables
-        # if y_curr < y_prev, robot is travelling N
-        # if y_curr > y_prev, robot is travelling S
-        # if y_curr = y_prev, robot is travelling E/W
-        # if x_curr < x_prev, robot is travelling W
-        # if x_curr > x_prev, robot is travelling E
-        if ord(current_loc[0][0]) < ord(prev_loc[0][0]):
-            self.direction = 'N'
+        return square_heading_pairs[max_prob_index]
 
-        elif ord(current_loc[0]) > ord(prev_loc[0]):
-            self.direction = 'N'
-        
-        else:
-            if ord(current_loc[0][1]) < ord(prev_loc[0][1]):
-                self.direction = 'W'
 
-            else:
-                self.direction = 'E'
-                
-        return self.direction
-
-        
-    
     # def bfs(self, des_loc):
     #     '''
     #     input: current location label and direction
@@ -222,6 +264,120 @@ class mazeLocalization():
     #             queue.append(new_path)
 
     #     print bfs(graph, '1', '11')
+
+    # # get potential locations of current square
+    # def get_location(self, orientations, new_current_squares=None):
+    #     '''
+    #     input: 
+    #         - list of wall readings at different orientations 
+    #             -- organized in counterclockwise direction starting from front ([front, left, back, right])
+    #             -- True = wall, False = no wall
+    #             -- ie. [False, True, True, True]
+    #         - list of potential neighbouring squares labels
+    #     output: list of potential locations in maze (ie. ['A2', 'B2'])
+    #     '''
+    #     # set current wall configuration as None
+    #     wall_config = None
+
+    #     # print('get_location function - orientation: ', orientations)
+
+    #     # True = wall in reading 
+    #     if True in orientations:
+    #         # sum of 1 = one wall in reading
+    #         if sum(orientations) == 1:
+    #             wall_config = 1
+    #         # sum of 2 = 2 walls in reading
+    #         elif sum(orientations) == 2:
+    #             indices = [i for i, x in enumerate(orientations) if x == True]
+    #             # if sum is even then walls are opposite
+    #             if sum(indices) % 2 == 1:
+    #                 wall_config = 2
+    #             # if sum is odd then walls are adjacent
+    #             else: 
+    #                 wall_config = 3
+    #         # sum of 3 = 3 walls in reading
+    #         else:
+    #             wall_config = 4
+    #     # False = no walls in reading
+    #     else:
+    #         wall_config = 0
+
+    #     # print('get_location function - wall_config: ', wall_config)
+
+    #     # find all squares in map that have wall configuration
+    #     self.prev_loc = [k for k, v in self.mazeMap.items() if v == wall_config]
+
+    #     # if neighbouring square is given and not in list, remove potential location
+    #     if new_current_squares != None:
+    #         print('NEW CURR SQUARE', new_current_squares)
+    #         for square in new_current_squares[0]:
+    #             for pot_loc in self.prev_loc:
+    #                 if pot_loc not in self.neighbours(square):
+    #                     print(square)
+    #                     print(self.prev_loc)
+    #                     self.prev_loc.remove(pot_loc)
+    #         print('PREV', self.prev_loc)
+    #         self.curr_loc = self.neighbours(self.prev_loc[0])[0]
+    #         for square in self.curr_loc:
+    #             if square not in new_current_squares[0]:
+    #                 self.curr_loc.remove(square)
+    #         return self.prev_loc, self.curr_loc
+    #     else:
+    #         return self.prev_loc
+
+    # def neighbours(self, pot_loc):
+    #     '''
+    #     input: potential location label
+    #     return: list of neighbouring squares, list of corresponding wall configurations
+    #     '''
+    #     # get coordinate of potential location
+    #     for row in self.mazeLabels:
+    #         if pot_loc in row:
+    #             y, x = self.mazeLabels.index(row), row.index(pot_loc)
+
+    #     # find neighbouring squares
+    #     neighbouring_squares = [self.mazeLabels[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.mazeLabels)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.mazeLabels[0])-1 else x + 1)]
+    #     # find neighbouring square wall configurations
+    #     neighbouring_square_wall_configs = [self.wallConfigs[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.wallConfigs)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.wallConfigs[0])-1 else x + 1)]
+
+    #     # find index of potential location in neighbouring squares
+    #     pot_loc_index = neighbouring_squares.index(pot_loc)
+        
+    #     # remove potential location
+    #     neighbouring_squares.pop(pot_loc_index)
+    #     neighbouring_square_wall_configs.pop(pot_loc_index)
+        
+    #     return neighbouring_squares, neighbouring_square_wall_configs
+    
+    # def find_direction(self, current_loc, prev_loc):
+    #     '''
+    #     input: current location label and previous location label
+    #     output: direction (N, E, S, W) that robot is facing
+    #         - N is top of maze
+    #     '''
+
+    #     self.direction = None
+
+    #     # compare y-axis lables
+    #     # if y_curr < y_prev, robot is travelling N
+    #     # if y_curr > y_prev, robot is travelling S
+    #     # if y_curr = y_prev, robot is travelling E/W
+    #     # if x_curr < x_prev, robot is travelling W
+    #     # if x_curr > x_prev, robot is travelling E
+    #     if ord(current_loc[0][0]) < ord(prev_loc[0][0]):
+    #         self.direction = 'N'
+
+    #     elif ord(current_loc[0]) > ord(prev_loc[0]):
+    #         self.direction = 'N'
+        
+    #     else:
+    #         if ord(current_loc[0][1]) < ord(prev_loc[0][1]):
+    #             self.direction = 'W'
+
+    #         else:
+    #             self.direction = 'E'
+                
+    #     return self.direction
 
 
 ##############################################################################################
