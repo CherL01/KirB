@@ -35,10 +35,12 @@ class MazeLocalization():
         self.labels2coords_y_x = {label: coord for label, coord in zip(mazeLabels_flat, [(y, x) for x in range(8) for y in range(4)])}
         self.coords_y_x2labels = {coord: label for label, coord in self.labels2coords_y_x.items()}
         
-        # initialize current location, coordinates, and potential square heading pairs
+        # initialize current location, coordinates, potential square heading pairs, last movement command given
         self.current_location = None
         self.current_location_coords = None
         self.square_heading_pairs = None
+        self.last_movement = None
+
         
         # square dimension (inches)
         self.square_dim = 12
@@ -51,6 +53,9 @@ class MazeLocalization():
 
         # sensor noise
         self.sensor_noise = 2
+
+        # probability threshold (diff between highest and second highest prob for robot to be considered localized)
+        self.prob_threshold = 0.00005
     
     def make_movement(self, current_loc, heading, mov_direction, turn = True):
         """ 
@@ -180,8 +185,8 @@ class MazeLocalization():
         # case 1: one wall at F (wall config = 1)
         # potential squares: B8, D3 ; A2, B1 (loading zone)
         if sum(wall_locs) == 1:
-            potential_squares = ['B8', 'D3']
-            headings = ['E', 'S']
+            potential_squares = ['A2', 'B1', 'B8', 'D3']
+            headings = ['N', 'W', 'E', 'S']
 
         # case 2: two walls at F + L (wall config = 2)
         # IF WALLS AT F + R, ROTATE RIGHT SO WALLS ARE AT F + L
@@ -192,8 +197,8 @@ class MazeLocalization():
             if wall_locs[1] == 0:
                 rotate = True 
 
-            potential_squares = ['A4', 'B4', 'D1', 'D6']
-            headings = ['E', 'W', 'W', 'S']
+            potential_squares = ['A1', 'B2', 'A4', 'B4', 'D1', 'D6']
+            headings = ['N', 'S', 'E', 'W', 'W', 'S']
 
         # case 3: three walls at F + L + R (wall config = 4)
         # potential squares: A6, A8, C3, D8
@@ -233,13 +238,13 @@ class MazeLocalization():
 
         square_heading_pairs_reordered, probs_reordered = list(zip(*pairs_w_probs))
 
-        return square_heading_pairs_reordered, probs_reordered
+        return square_heading_pairs_reordered, list(np.array(probs_reordered) / sum(probs_reordered))
     
     def prob_after_moving(self, movement, sensor_readings_new, square_heading_pairs):
         '''
         input: movement from robot, list of new sensor readings after robot moves, 
             list of tuples of original potential squares labels and their respective headings
-        output: list of new square heading pairs, list of corresponding probabilities
+        output: list of new square heading pairs (in descending probability), list of corresponding probabilities
         '''
 
         # get new square heading pairs
@@ -264,7 +269,7 @@ class MazeLocalization():
 
         new_square_heading_pairs_reordered, probs_reordered = list(zip(*pairs_w_probs))
 
-        return new_square_heading_pairs_reordered, probs_reordered
+        return new_square_heading_pairs_reordered, list(np.array(probs_reordered) / sum(probs_reordered))
     
     # def get_location(self, square_heading_pairs, probabilities):
     #     '''
@@ -333,19 +338,32 @@ class MazeLocalization():
         output: movement command
         
         note: this function gives the direction of the next square for the robot to move to for localization
-            (robot will move to the direction with the lowest sensor reading that's not an immediate wall)
+            (order: L, F, R, B)
         '''
 
-        movements = ['F', 'L', 'B', 'R']
-        new_readings = [s - self.wall_limit for s in sensor_readings]
-        min_index = new_readings.index(min(new_readings))
+        # define order of movements
+        movements = ['L', 'F', 'R', 'B']
 
-        return movements[min_index]
+        # if no wall on left side
+        if sensor_readings[1]:
+            return movements[0]
+        
+        # if no wall in front
+        elif sensor_readings[0]:
+            return movements[1]
+        
+        # if no wall on right side
+        elif sensor_readings[3]:
+            return movements[2]
+        
+        # if no wall in back
+        else:
+            return movements[3]
     
     def localize(self, sensor_readings):
         '''
         input: sensor readings
-        output: True if robot localized (False otherwise), current location (s), list of movements to complete localization process
+        output: True if robot localized (False otherwise), current location(s), list of movements to complete localization process
         '''
 
         # if robot is in inital square (3 initial localization cases)
@@ -355,7 +373,7 @@ class MazeLocalization():
 
             # if rotation is required, return rotation command to main script
             if rotation == True:
-                return False, None, ['right turn']
+                return self.localized, square_heading_pairs, ['right turn'] # can change right turn command later to fit generalized command
 
             # get probabilities for all potential square label and heading pairs
             square_heading_pairs_reordered, square_probs = self.square_prob(sensor_readings, square_heading_pairs)
@@ -366,22 +384,35 @@ class MazeLocalization():
 
             # get movement command to continue localization
             movement = self.get_movement(sensor_readings)
+            self.last_movement = movement
 
-            return False, self.square_heading_pairs, movement
+            return self.localized, self.square_heading_pairs, movement
 
         # if robot is not localized
         elif self.localized == False:
 
             # get probabilities for new potential square label and heading pairs
-            movement = self.get_movement(sensor_readings)
-            new_square_heading_pairs_reordered, new_square_probs = self.prob_after_moving(movement, sensor_readings, self.square_heading_pairs)
+            new_square_heading_pairs_reordered, new_square_probs = self.prob_after_moving(self.last_movement, sensor_readings, self.square_heading_pairs)
             self.square_heading_pairs = new_square_heading_pairs_reordered
-        
-            return True, self.square_heading_pairs[0], ['']
+
+            # if one probability is significantly higher than the rest of the probabilities, then robot has localized
+            if (new_square_probs[0] - new_square_probs[1]) > self.prob_threshold:
+                # set localized as true to continue to navigation
+                self.localized = True
+            
+                return self.localized, self.square_heading_pairs[0], ['']
+            
+
+            # get movement command to continue localization
+            movement = self.get_movement(sensor_readings)
+            self.last_movement = movement
+
+            return self.localized, self.square_heading_pairs, movement
 
         # robot is localized, continue to navigation
         else:
             
+
             
 
 
