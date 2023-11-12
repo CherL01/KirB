@@ -6,6 +6,9 @@ class MazeLocalization():
 
     # initialize maze coordinates
     def __init__(self):
+
+        # initialize that robot is not localized
+        self.localized = False
         
         # maze labels
         self.maze_labels = [[f'{y}{x}' for x in range(1, 9)] for y in ['A', 'B', 'C', 'D']]
@@ -159,10 +162,13 @@ class MazeLocalization():
     def potential_square_heading_pairs(self, sensor_readings):
         '''
         input: list of sensor readings (F, L, B, R)
-        output: list of potential squares labels and their respective headings (N, S, E, W)
+        output: list of potential squares labels, their respective headings (N, S, E, W), if rotation is required
 
         note: this function is for initial conditions ONLY (after robot travels to a wall to ensure that it is in a square)
         '''
+
+        # variable to determine if robot requires 
+        rotate = False
 
         # check wall locations
         wall_locs = [1 if sensor_value <= self.wall_limit else 0 for sensor_value in sensor_readings]
@@ -178,10 +184,9 @@ class MazeLocalization():
         # potential squares: A4, B4, D1, D6 ; A1, B2 (loading zone)
         elif sum(wall_locs) == 2:
 
-            # if walls at F + R
-            if wall_locs[1] == True:
-                ### CODE FOR ROTATING ROBOT 90 DEG TO THE RIGHT ###
-                pass # delete later
+            # if walls at F + R, prompt robot to rotate 90 deg to the right
+            if wall_locs[1] == 0:
+                rotate = True 
 
             potential_squares = ['A4', 'B4', 'D1', 'D6']
             headings = ['E', 'W', 'W', 'S']
@@ -192,7 +197,7 @@ class MazeLocalization():
             potential_squares = ['A6', 'A8', 'C3', 'D8']
             headings = ['N', 'N', 'N', 'S']
 
-        return potential_squares, headings
+        return potential_squares, headings, rotate
             
     def gaussian_prob(self, mu, sigma, x):
         '''
@@ -219,6 +224,11 @@ class MazeLocalization():
             probs.append(w + 1.e-300)
 
         return probs
+    
+    def prob_after_moving(self):
+        '''
+        input: list of 
+        '''
     
     def get_location(self, square_heading_pairs, probabilities):
         '''
@@ -280,6 +290,20 @@ class MazeLocalization():
                 if s not in seen:
                     queue.append(path + [s])
                     seen.add(s)
+
+    def localize(self, sensor_readings):
+        '''
+        input: sensor readings
+        output: True if robot localized (False otherwise), list of movements
+        '''
+
+        if self.localized == False:
+            # get square labels, headings, if rotation is required
+            square_labels, headings, rotation = self.potential_square_heading_pairs(sensor_readings)
+
+        if rotation == True:
+            return False, ['right turn']
+
 
     # # get potential locations of current square
     # def get_location(self, orientations, new_current_squares=None):
@@ -417,7 +441,7 @@ class MazeLocalization():
 
 ### testing - NEED TO FINISH
 
-Loc = mazeLocalization()
+# Loc = mazeLocalization()
 
 # # test 1
 # test_wall_config1 = [False, True, True, True]
@@ -432,18 +456,18 @@ Loc = mazeLocalization()
 # current = Loc.get_location(test_wall_config1, new_current_squares=front_square)
 # print(current) # should return 'D8'
 
-# test 2
-test_wall_config3 = [False, False, True, True]
-test_wall_config4 = [False, True, False, True]
+# # test 2
+# test_wall_config3 = [False, False, True, True]
+# test_wall_config4 = [False, True, False, True]
 
-current = Loc.get_location(test_wall_config3)
-print(current)
-for loc in current:
-    print(loc, Loc.neighbours(loc))
-front_square = Loc.get_location(test_wall_config4)
-print(front_square)
-current = Loc.get_location(test_wall_config3, new_current_squares=front_square)
-print(current) # should return 
+# current = Loc.get_location(test_wall_config3)
+# print(current)
+# for loc in current:
+#     print(loc, Loc.neighbours(loc))
+# front_square = Loc.get_location(test_wall_config4)
+# print(front_square)
+# current = Loc.get_location(test_wall_config3, new_current_squares=front_square)
+# print(current) # should return 
 
 # wall_configs = [
 #     [2, 1, 3, 2, math.inf, 4, math.inf, 4],
