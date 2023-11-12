@@ -2,7 +2,7 @@ import math
 import numpy as np
 import collections
 
-class mazeLocalization():
+class MazeLocalization():
 
     # initialize maze coordinates
     def __init__(self):
