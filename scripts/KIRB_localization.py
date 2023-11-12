@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from sklearn.metrics import mean_absolute_percentage_error as mape
+import collections
 
 class mazeLocalization():
 
@@ -28,6 +28,10 @@ class mazeLocalization():
         mazeLabels_flat = [f'{y}{x}' for x in range(1, 9) for y in ['A', 'B', 'C', 'D']]
         self.labels2coords_y_x = {label: coord for label, coord in zip(mazeLabels_flat, [(y, x) for x in range(8) for y in range(4)])}
         self.coords_y_x2labels = {coord: label for label, coord in self.labels2coords_y_x.items()}
+        
+        # initialize current location
+        self.current_location = None
+        self.current_location_coords = None
         
         # square dimension (inches)
         self.square_dim = 12
@@ -125,12 +129,6 @@ class mazeLocalization():
         input: square label, heading (direction: N, S, E, W)
         output: theoretical sensor readings (F, L, B, R)
         '''
-
-        # get coordinate of square
-        for row in self.maze_labels:
-            if square_label in row:
-                y, x = self.maze_labels.index(row), row.index(square_label)
-                break
         
         # set up potential movement directions and theoretical values list
         movement_directon = ['F', 'L', 'B', 'R']
@@ -230,40 +228,58 @@ class mazeLocalization():
 
         # get index of the max probability
         max_prob_index = probabilities.index(max(probabilities))
+        self.current_location = square_heading_pairs[max_prob_index][0]
+        self.current_location_coords = self.labels2coords_y_x[self.current_location]
 
         return square_heading_pairs[max_prob_index]
 
+    def neighbours(self, square):
+        '''
+        input: square label
+        return: list of neighbouring squares
+        '''
+        # get coordinate of potential location
+        y, x = self.labels2coords_y_x[square]
 
-    # def bfs(self, des_loc):
-    #     '''
-    #     input: current location label and direction
-    #     output: shortest path to desired location
-    #     '''
+        # find neighbouring squares
+        neighbouring_squares = [self.maze_labels[r][c] for r in range(y-1 if y > 0 else y, y + 2 if y < len(self.maze_labels)-1 else y + 1) for c in range(x-1 if x > 0 else x, x + 2 if x < len(self.maze_labels[0])-1 else x + 1)]
 
-    #     # Maintain a queue of paths
-    #     queue = []
+        # find index of potential location in neighbouring squares
+        pot_loc_index = neighbouring_squares.index(square)
+        
+        # remove potential location
+        neighbouring_squares.pop(pot_loc_index)
+        
+        return neighbouring_squares
 
-    #     # Push the first path into the queue
-    #     queue.append([self.current_location])
-    #     while queue:
+    def bfs(self, des_locs):
+        '''
+        input: list of destination locations
+        output: shortest path to destination location
+        '''
 
-    #         # Get the first path from the queue
-    #         path = queue.pop(0)
+        # initialize queue (FIFO) for paths to a square from current location
+        # initialize list of squares seen
+        queue = collections.deque([[self.current_location]])
+        seen = set([self.current_location])
 
-    #         # Get the last node from the path
-    #         node = path[-1]
+        # loop through to check each potential path
+        while queue:
 
-    #         # Path found
-    #         if node == end:
-    #             return path
+            # get first element (path) of queue
+            path = queue.popleft()
+            
+            label = path[-1]
 
-    #         # Enumerate all adjacent nodes, construct a new path and push it into the queue
-    #         for adjacent in graph.get(node, []):
-    #             new_path = list(path)
-    #             new_path.append(adjacent)
-    #             queue.append(new_path)
+            if label in des_locs:
+                return path
+            
+            neighbouring_squares = self.neighbours(label)
 
-    #     print bfs(graph, '1', '11')
+            for s in neighbouring_squares:
+                if s not in seen:
+                    queue.append(path + [s])
+                    seen.add(s)
 
     # # get potential locations of current square
     # def get_location(self, orientations, new_current_squares=None):
