@@ -121,28 +121,29 @@ class ObstacleAvoidance():
     def __init__(self):
 
         # self.PARALLEL = False
-        self.RUNNING = True
+        self.running = True
 
         # store sensor labels, sensors, and sensor names in lists/dicts
-        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4']
+        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
         self.sensor_dict = {}
         for l, s in zip(self.sensor_label_list, [None for i in range(5)]):
             self.sensor_dict[l] = s
-        self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT']
+        self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
         
-        # initialize sensors
-        self.frontSensor = self.sensor_dict['u0']
-        self.leftFrontSensor = self.sensor_dict['u1']
-        self.leftBackSensor = self.sensor_dict['u2']
-        self.rightFrontSensor = self.sensor_dict['u3']
-        self.rightBackSensor = self.sensor_dict['u4']
-        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        # # initialize sensors
+        # self.front_sensor = self.sensor_dict['u0']
+        # self.left_front_sensor = self.sensor_dict['u1']
+        # self.left_back_sensor = self.sensor_dict['u2']
+        # self.right_front_sensor = self.sensor_dict['u3']
+        # self.right_back_sensor = self.sensor_dict['u4']
+        # self.back_sensor = self.sensor_dict['u5']
+        # self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
 
         #initialize sensor difference and limit
-        self.leftSensorDifference = 0
-        self.rightSensorDifference = 0
-        self.sensorDifferenceLimit = 0.15
-        self.eStopLimit = 1.25
+        self.left_sensor_difference = 0
+        self.right_sensor_difference = 0
+        self.sensor_difference_limit = 0.15
+        self.e_stop_limit = 1.25
 
     def emergency_stop(self):
         '''
@@ -153,11 +154,11 @@ class ObstacleAvoidance():
         '''
 
         # check if front sensor reading is less than emergency stop limit
-        # if (self.frontSensor < self.eStopLimit) or (self.leftFrontSensor < self.eStopLimit) or (self.leftBackSensor < self.eStopLimit) or (self.rightFrontSensor < self.eStopLimit) or (self.rightBackSensor < self.eStopLimit):
-        print('MIN',min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor))
-        if min(self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor) < self.eStopLimit:
+        # if (self.front_sensor < self.e_stop_limit) or (self.left_front_sensor < self.e_stop_limit) or (self.left_back_sensor < self.e_stop_limit) or (self.right_front_sensor < self.e_stop_limit) or (self.right_back_sensor < self.e_stop_limit):
+        print('MIN',min(self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor))
+        if min(self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor) < self.e_stop_limit:
             transmitSerial('xx')
-            self.RUNNING = False
+            self.running = False
             print("Emergency stop!")
         
 
@@ -202,13 +203,13 @@ class ObstacleAvoidance():
         # for i in range(len(reading)-1):
         #     self.sensor_dict[self.sensor_label_list[i]] = reading[i]
         
-        self.frontSensor = self.sensor_dict['u0']
-        self.leftFrontSensor = self.sensor_dict['u1']
-        self.leftBackSensor = self.sensor_dict['u2']
-        self.rightFrontSensor = self.sensor_dict['u3']
-        self.rightBackSensor = self.sensor_dict['u4']
+        self.front_sensor = self.sensor_dict['u0']
+        self.left_front_sensor = self.sensor_dict['u1']
+        self.left_back_sensor = self.sensor_dict['u2']
+        self.right_front_sensor = self.sensor_dict['u3']
+        self.right_back_sensor = self.sensor_dict['u4']
         
-        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
         
         return self.sensor_dict
     
@@ -221,10 +222,10 @@ class ObstacleAvoidance():
         '''
 
         # find difference between left sensors
-        self.leftSensorDifference = abs(self.leftFrontSensor - self.leftBackSensor)
+        self.left_sensor_difference = abs(self.left_front_sensor - self.left_back_sensor)
 
         # find difference between right sensors
-        self.rightSensorDifference = abs(self.rightFrontSensor - self.rightBackSensor)
+        self.right_sensor_difference = abs(self.right_front_sensor - self.right_back_sensor)
 
     def move(self, command=' w0-1'):
         '''
@@ -252,7 +253,7 @@ class ObstacleAvoidance():
         # transmitSerial(' r0-90')
         time.sleep(0.2)
 
-        while (self.RUNNING == True): # (self.PARALLEL == False) 
+        while (self.running == True): # (self.PARALLEL == False) 
 
             # check sensors, order: front -> front left -> back left -> front right -> back right
             for sensor in [' ua']: #[' ua',' u0', ' u1', ' u2', ' u3', ' u4']:
@@ -262,15 +263,15 @@ class ObstacleAvoidance():
             print('sensor dict', self.sensor_dict)
             # check if emergency stop needed
             self.emergency_stop()
-            if (self.RUNNING == False):
+            if (self.running == False):
                 break
 
             # ROVER IS NOT PARALLEL
             self.sensor_diff()
-            if max(self.leftSensorDifference, self.rightSensorDifference) > self.sensorDifferenceLimit:
+            if max(self.left_sensor_difference, self.right_sensor_difference) > self.sensor_difference_limit:
             
                 # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
-                if self.leftSensorDifference > self.sensorDifferenceLimit and self.rightSensorDifference > self.sensorDifferenceLimit:
+                if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
                     
                     # CONDITION #1: 45deg placement
                     closest = self.sensor_list.index(min(self.sensor_list[1:]))
@@ -294,11 +295,11 @@ class ObstacleAvoidance():
 
                     
                     # CONDITION #2: 3-way/4-way intersection (NOT AT WALL YET)
-                    if self.frontSensor >= 2.5:
+                    if self.front_sensor >= 2.5:
                         self.move(' w0-1')
 
                     # CONDITION #3: 3-way/4-way intersection (AT THE WALL)
-                    elif self.frontSensor < 2.5:
+                    elif self.front_sensor < 2.5:
                         
                         # 3 way intersection
                             # if this localizing, turn toward closest side
@@ -312,48 +313,48 @@ class ObstacleAvoidance():
 
             
                 # LEFT SIDE IS NOT PARALLEL
-                elif self.leftSensorDifference > self.sensorDifferenceLimit and self.rightSensorDifference < self.sensorDifferenceLimit:
+                elif self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference < self.sensor_difference_limit:
                     print("Left side not parallel...")
                     
                     #if 
-                    if self.frontSensor >= 2.25:
+                    if self.front_sensor >= 2.25:
                         # move forward 1 inch
                         self.move(' w0-1')
                     
                     # rover is parallel, if less than 3, make a uturn
-                    elif self.frontSensor < 2.25:
+                    elif self.front_sensor < 2.25:
                         
                         self.move(' r0--90')
                         print("LEFT TURN")
                 
                 # RIGHT SIDE IS NOT PARALLEL    
-                elif self.rightSensorDifference > self.sensorDifferenceLimit and self.leftSensorDifference < self.sensorDifferenceLimit:
+                elif self.right_sensor_difference > self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
                     print("Right side not parallel...")
                     
-                    if self.frontSensor >= 2.25:
+                    if self.front_sensor >= 2.25:
                         # move forward 1 inch
                         self.move(' w0-1')
                         print("FORWARD ONE INCH")
                     
                     # rover is parallel, if less than 3, make a uturn
-                    elif self.frontSensor < 2.25:
+                    elif self.front_sensor < 2.25:
                         
                         self.move(' r0-90')
                         print("RIGHT TURN")
                 
             # ROVER IS PARALLEL
-            elif self.rightSensorDifference < self.sensorDifferenceLimit and self.leftSensorDifference < self.sensorDifferenceLimit:
+            elif self.right_sensor_difference < self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
                 
-                if self.frontSensor >= 2.25:
+                if self.front_sensor >= 2.25:
                     # move forward 1 inch
                     self.move(' w0-1')
                     print("rOVER PARALLEL. FORWARD ONE INCH.")
 
-                elif self.frontSensor < 2.25:
-                    if self.leftFrontSensor > self.rightFrontSensor:
+                elif self.front_sensor < 2.25:
+                    if self.left_front_sensor > self.right_front_sensor:
                         self.move(' r0--90')
 
-                    elif self.leftFrontSensor < self.rightFrontSensor:
+                    elif self.left_front_sensor < self.right_front_sensor:
                         self.move(' r0-90')
                     
             print("--------------")
