@@ -6,58 +6,8 @@ import math
 from threading import Thread
 import _thread
 from datetime import datetime
-# from KIRB_localization import mazeLocalization
 
-# def write_read(x):
-#     ser.write(bytes(x, 'utf-8'))
-#     time.sleep(2.5)
-#     data = ser.readline().strip().decode('ascii')
-#     return data
-
-# def transmitNetwork(data):
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#         try:
-#             s.connect((HOST, PORT_TX))
-#             s.send(data.encode('utf-8'))
-#         except (ConnectionRefusedError, ConnectionResetError):
-#             print('Tx Connection was refused or reset.')
-#             _thread.interrupt_main()
-#         except TimeoutError:
-#             print('Tx socket timed out.')
-#             _thread.interrupt_main()
-#         except EOFError:
-#             print('\nKeyboardInterrupt triggered. Closing...')
-#             _thread.interrupt_main()
-
-# def receiveNetwork():
-#     global responses
-#     global time_rx
-#     while True:
-#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s2:
-#             try:
-#                 s2.connect((HOST, PORT_RX))
-#                 response_raw = s2.recv(1024)
-#                 if response_raw:
-#                     responses = bytes_to_list(response_raw)
-#                     time_rx = datetime.now().strftime("%H:%M:%S")
-#             except (ConnectionRefusedError, ConnectionResetError):
-#                 print('Rx connection was refused or reset.')
-#                 _thread.interrupt_main()
-#             except TimeoutError:
-#                 print('Response not received from robot.')
-#                 _thread.interrupt_main()
-
-# def bytes_to_list(msg):
-#     if SIMULATE:
-#         num_responses = int(len(msg)/8)
-#         data = struct.unpack("%sd" % str(num_responses), msg)
-#         return data
-#     else:
-#         num_responses = int(len(msg)/8)
-#         if num_responses:
-#             unpackformat = "<" + num_responses*"f4x"
-#             data = struct.unpack(unpackformat, msg)
-#             return data
+##### MOVE TO PYARDUINO #####
 
 def transmitSerial(data):
     print(data)
@@ -71,27 +21,7 @@ def receiveSerial():
     global responses
     global time_rx
     responses = ser.readline().strip().decode('ascii')
-    time.sleep(0.5)
-    
-    # while True:
-        # If responses are ascii characters, use this
-        
-        
-        # response_raw = ser.readline().strip().decode('ascii')
-        # response_raw = ser.readline()                         # debug
-        # print(1, response_raw)    # debug only
-
-        # If responses are 8 bytes (4-byte floats with 4 bytes of padding 0x00 values after), use this
-        # response_raw = bytes_to_list(ser.readline())
-
-        # If response received, save it
-        # if response_raw[0]:
-        #     # print(2, response_raw[0])     # debug only
-        #     responses = response_raw
-        #     # print(3, responses[0])    # debug only
-        #     time_rx = datetime.now().strftime("%H:%M:%S")
-
-        
+    time.sleep(0.5)    
 
 def transmit(data):
     transmitSerial(data)
@@ -105,45 +35,94 @@ PORT_TX = 61200     # The port used by the *CLIENT* to receive
 PORT_RX = 61201     # The port used by the *CLIENT* to send data
 
 COM_PORT = 'COM7'
-# ser = serial.Serial(COM_PORT, 9600, timeout=0) 
-# Thread(target = receiveSerial, daemon=True).start()
 
 # Create tx and rx threads
 ser = serial.Serial(COM_PORT, 9600, timeout=0)
 Thread(target = receiveSerial, daemon = True).start()
-    
-# responses = [False]
-# time_rx = 'Never'
+
 time.sleep(2)
+
+###################################################################################################
 
 class ObstacleAvoidance():
 
     def __init__(self):
 
-        # self.PARALLEL = False
         self.running = True
 
         # store sensor labels, sensors, and sensor names in lists/dicts
-        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
-        self.sensor_dict = {}
-        for l, s in zip(self.sensor_label_list, [None for i in range(5)]):
-            self.sensor_dict[l] = s
         self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
-        
-        # # initialize sensors
-        # self.front_sensor = self.sensor_dict['u0']
-        # self.left_front_sensor = self.sensor_dict['u1']
-        # self.left_back_sensor = self.sensor_dict['u2']
-        # self.right_front_sensor = self.sensor_dict['u3']
-        # self.right_back_sensor = self.sensor_dict['u4']
-        # self.back_sensor = self.sensor_dict['u5']
-        # self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
+        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
+        self.sensor_name2reading_dict = {}
+        for l, s in zip(self.sensor_name_list, [None for _ in range(len(self.sensor_name_list))]):
+            self.sensor_name2reading_dict[l] = s
 
         #initialize sensor difference and limit
         self.left_sensor_difference = 0
         self.right_sensor_difference = 0
         self.sensor_difference_limit = 0.15
         self.e_stop_limit = 1.25
+        
+    def send_command(self, command=' ua'):
+        '''
+        input: command (str)
+        output: None 
+
+        note: need to include a space before command due to bluetooth settings
+        '''
+
+        transmit(command)
+        time.sleep(1.5)
+
+        pass
+
+    def receive_readings(self):
+        '''
+        input: None
+        output: list of sensor readings in order of F, L, B, R 
+            - can be used as input to localization
+
+        note: also stores sensor readings in self.sensor_name2reading_dict 
+        '''
+        
+        
+        receiveSerial()
+        reading = responses                             # list
+        print(f"Sensor readings: {reading}")
+        
+        sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
+        print(sensor_readings)
+        
+        for i in range(len(sensor_readings)-1):
+            self.sensor_name2reading_dict[self.sensor_label_list[i]] = sensor_readings[i]
+
+        # for i in range(len(reading)-1):
+        #     self.sensor_name2reading_dict[self.sensor_label_list[i]] = reading[i]
+        
+        self.front_sensor = self.sensor_name2reading_dict['u0']
+        self.left_front_sensor = self.sensor_name2reading_dict['u1']
+        self.left_back_sensor = self.sensor_name2reading_dict['u2']
+        self.right_front_sensor = self.sensor_name2reading_dict['u3']
+        self.right_back_sensor = self.sensor_name2reading_dict['u4']
+        
+        self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
+        
+        return self.sensor_name2reading_dict
+
+
+
+
+
+
+        # # initialize sensors
+        # self.front_sensor = self.sensor_name2reading_dict['u0']
+        # self.left_front_sensor = self.sensor_name2reading_dict['u1']
+        # self.left_back_sensor = self.sensor_name2reading_dict['u2']
+        # self.right_front_sensor = self.sensor_name2reading_dict['u3']
+        # self.right_back_sensor = self.sensor_name2reading_dict['u4']
+        # self.back_sensor = self.sensor_name2reading_dict['u5']
+        # self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
+
 
     def emergency_stop(self):
         '''
@@ -154,7 +133,6 @@ class ObstacleAvoidance():
         '''
 
         # check if front sensor reading is less than emergency stop limit
-        # if (self.front_sensor < self.e_stop_limit) or (self.left_front_sensor < self.e_stop_limit) or (self.left_back_sensor < self.e_stop_limit) or (self.right_front_sensor < self.e_stop_limit) or (self.right_back_sensor < self.e_stop_limit):
         print('MIN',min(self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor))
         if min(self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor) < self.e_stop_limit:
             transmitSerial('xx')
@@ -164,54 +142,6 @@ class ObstacleAvoidance():
 
         #### might change code to move away from closest wall instead of stopping ####
 
-    def send_command(self, command=' ua'):
-        '''
-        input: sensor of interest
-        output: sensor reading 
-        '''
-
-        # # get sensor name from label
-        # sensor_name = self.sensor_name_list[self.sensor_label_list.index(sensor_label)]
-
-        # get sensor reading
-        # transmitSerial(f' {sensor_label}')
-        # transmitSerial(' ua')
-        # time.sleep(5)
-        # print(f"Ultrasonic {sensor_name} reading: {round(responses[0], 3)}")
-        # self.sensor_dict[sensor_label] = responses[0]
-        # print('RESPONSES', responses)
-        
-        # need to send " ua" to get sensor readings (stuck on this part!)
-        
-        # ser.write(bytes(command, 'utf-8'))
-        # time.sleep(2.5)
-        # reading = ser.readline().strip().decode('ascii') 
-        # print(reading)
-        
-        transmit(command)
-        time.sleep(1.5)
-        receiveSerial()
-        reading = responses                             # list
-        print(f"Sensor readings: {reading}")
-        
-        sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
-        print(sensor_readings)
-        
-        for i in range(len(sensor_readings)-1):
-            self.sensor_dict[self.sensor_label_list[i]] = sensor_readings[i]
-
-        # for i in range(len(reading)-1):
-        #     self.sensor_dict[self.sensor_label_list[i]] = reading[i]
-        
-        self.front_sensor = self.sensor_dict['u0']
-        self.left_front_sensor = self.sensor_dict['u1']
-        self.left_back_sensor = self.sensor_dict['u2']
-        self.right_front_sensor = self.sensor_dict['u3']
-        self.right_back_sensor = self.sensor_dict['u4']
-        
-        self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
-        
-        return self.sensor_dict
     
     def sensor_diff(self):
         '''
@@ -260,7 +190,7 @@ class ObstacleAvoidance():
                 # self.sensor_reading(sensor)
                 self.send_command(sensor)
 
-            print('sensor dict', self.sensor_dict)
+            print('sensor dict', self.sensor_name2reading_dict)
             # check if emergency stop needed
             self.emergency_stop()
             if (self.running == False):
