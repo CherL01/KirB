@@ -1,0 +1,55 @@
+BEFORE ROTATION
+
+
+s:  C3 - N
+sr:  [3, 2.5, 15, 2.7]
+initial:  (False, (('C3', 'N'), ('A6', 'N'), ('A8', 'N'), ('D8', 'S')), 'B')
+
+
+s:  D6 - E (should return rotation = True)
+sr:  [3.5, 40, 60, 4]
+initial:  (False, [('A1', 'N'), ('B2', 'S'), ('A4', 'E'), ('B4', 'W'), ('D1', 'W'), ('D6', 'S')], 'RT')
+
+
+
+
+
+AFTER ROTATION
+
+
+s:  C3 - N
+sr:  [3, 2.5, 15, 2.7]
+initial:  (False, (('C3', 'N'), ('A6', 'N'), ('A8', 'N'), ('D8', 'S')), 'B')
+new square:  D3 - N
+sr new:  [15, 25, 4, 32]
+localize:  (True, ('D3', 'N'), [''])
+current loc:  ('D3', 'N')
+loading zone nagivation:  (['D3', 'D2', 'D1', 'C1', 'B1'], [('L', 'W'), ('F', 'W'), ('R', 'N'), ('F', 'N')])
+new current loc:  ('B1', 'N')
+dl:  A6
+drop off zone navigation:  (['B1', 'A1', 'A2', 'A3', 'A4', 'B4', 'B5', 'B6', 'A6'], [('F', 'N'), ('R', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('L', 'E'), ('F', 'E'), ('L', 'N')])
+dl:  A8
+drop off zone navigation:  (['B1', 'A1', 'A2', 'A3', 'A4', 'B4', 'B5', 'B6', 'B7', 'B8', 'A8'], [('F', 'N'), ('R', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('L', 'E'), ('F', 'E'), ('F', 'E'), ('F', 'E'), ('L', 'N')])
+dl:  C3
+drop off zone navigation:  (['B1', 'C1', 'D1', 'D2', 'D3', 'C3'], [('B', 'N'), ('B', 'N'), ('R', 'E'), ('F', 'E'), ('L', 'N')])
+dl:  D8
+drop off zone navigation:  (['B1', 'A1', 'A2', 'A3', 'A4', 'B4', 'B5', 'B6', 'B7', 'B8', 'C8', 'D8'], [('F', 'N'), ('R', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('L', 'E'), ('F', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('F', 'S')])
+
+
+s:  D6 - S (after rotation)
+sr:  [3.5, 4, 40, 60]
+initial:  (False, (('D6', 'S'), ('A1', 'N'), ('D1', 'W'), ('A4', 'E'), ('B4', 'W'), ('B2', 'S')), 'R')
+new square:  D5 - W
+sr new:  [48, 1, 14, 4]
+localize:  (True, ('D5', 'W'), [''])
+current loc:  ('D5', 'W')
+loading zone nagivation:  (['D5', 'D4', 'D3', 'D2', 'D1', 'C1', 'B1'], [('F', 'W'), ('F', 'W'), ('F', 'W'), ('F', 'W'), ('R', 'N'), ('F', 'N')])
+new current loc:  ('B1', 'N')
+dl:  A6
+drop off zone navigation:  (['B1', 'A1', 'A2', 'A3', 'A4', 'B4', 'B5', 'B6', 'A6'], [('F', 'N'), ('R', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('L', 'E'), ('F', 'E'), ('L', 'N')])
+dl:  A8
+drop off zone navigation:  (['B1', 'A1', 'A2', 'A3', 'A4', 'B4', 'B5', 'B6', 'B7', 'B8', 'A8'], [('F', 'N'), ('R', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('L', 'E'), ('F', 'E'), ('F', 'E'), ('F', 'E'), ('L', 'N')])
+dl:  C3
+drop off zone navigation:  (['B1', 'C1', 'D1', 'D2', 'D3', 'C3'], [('B', 'N'), ('B', 'N'), ('R', 'E'), ('F', 'E'), ('L', 'N')])
+dl:  D8
+drop off zone navigation:  (['B1', 'A1', 'A2', 'A3', 'A4', 'B4', 'B5', 'B6', 'B7', 'B8', 'C8', 'D8'], [('F', 'N'), ('R', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('L', 'E'), ('F', 'E'), ('F', 'E'), ('F', 'E'), ('R', 'S'), ('F', 'S')])
