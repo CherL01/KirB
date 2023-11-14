@@ -104,7 +104,7 @@ HOST = '127.0.0.1'  # The server's hostname or IP address
 PORT_TX = 61200     # The port used by the *CLIENT* to receive
 PORT_RX = 61201     # The port used by the *CLIENT* to send data
 
-COM_PORT = 'COM7'
+COM_PORT = 'COM4'
 # ser = serial.Serial(COM_PORT, 9600, timeout=0) 
 # Thread(target = receiveSerial, daemon=True).start()
 
@@ -126,7 +126,7 @@ class ObstacleAvoidance():
         # store sensor labels, sensors, and sensor names in lists/dicts
         self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
         self.sensor_dict = {}
-        for l, s in zip(self.sensor_label_list, [None for i in range(5)]):
+        for l, s in zip(self.sensor_label_list, [0 for i in range(6)]):
             self.sensor_dict[l] = s
         self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
         

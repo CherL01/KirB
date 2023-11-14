@@ -130,6 +130,31 @@ void loop() {
   Serial.print(leftMotorCount);
   Serial.print(" | ");
   Serial.println(rightMotorCount);
+
+  float ReadUltrasonicSensor(int sensorNum, int numAvg) {
+
+  float tempVal = 0.0;
+
+  for (int i=0; i< numAvg; i++) {
+    delay(50);
+    float echoCM = 0;
+    if (sensorNum == 1) {
+      echoCM = sonar1.ping_cm();
+    } else if (sensorNum == 2) {
+      echoCM = sonar2.ping_cm();
+    } else if (sensorNum == 3) {
+      echoCM = sonar3.ping_cm();
+    } else if (sensorNum == 4) {
+      echoCM = sonar4.ping_cm();
+    } else if (sensorNum == 5) {
+      echoCM = sonar5.ping_cm();
+    } else if (sensorNum == 6) {
+      echoCM = sonar6.ping_cm();
+    }
+    tempVal+= echoCM/2.54;    // convert to inches
+  }
+  return tempVal / ((float)numAvg);
+}
   
 }
 

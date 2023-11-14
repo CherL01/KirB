@@ -104,7 +104,7 @@ HOST = '127.0.0.1'  # The server's hostname or IP address
 PORT_TX = 61200     # The port used by the CLIENT to receive
 PORT_RX = 61201     # The port used by the CLIENT to send data
 
-COM_PORT = 'COM7'
+COM_PORT = 'COM4'
 # ser = serial.Serial(COM_PORT, 9600, timeout=0) 
 # Thread(target = receiveSerial, daemon=True).start()
 
@@ -274,6 +274,7 @@ class ObstacleAvoidance():
                     
                     # CONDITION #1: 45deg placement
                     closest = self.sensor_list.index(min(self.sensor_list[1:]))
+                    print(closest)
                     
                     # TURN 4 DEG WHEN NOT ALIGNED
                     # front left is closest
@@ -379,12 +380,3 @@ class ObstacleAvoidance():
 
 OA = ObstacleAvoidance()
 OA.parallel()
-Write to MIE444 Project
-
-
-
-Cherry Lian
-Henry Qi
-MIE444 Project
-Mute
-Search
