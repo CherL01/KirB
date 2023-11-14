@@ -72,6 +72,8 @@ class ObstacleAvoidance():
         self.e_stop_limit = 1.25
         self.square_dim = 12
         
+    def initial_navigation
+    
     def convert_command(self, command_loc):
         '''
         input: command from localization module
