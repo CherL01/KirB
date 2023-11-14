@@ -124,11 +124,11 @@ class ObstacleAvoidance():
         self.RUNNING = True
 
         # store sensor labels, sensors, and sensor names in lists/dicts
-        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4']
+        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
         self.sensor_dict = {}
         for l, s in zip(self.sensor_label_list, [None for i in range(5)]):
             self.sensor_dict[l] = s
-        self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT']
+        self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
         
         # initialize sensors
         self.frontSensor = self.sensor_dict['u0']
@@ -136,7 +136,9 @@ class ObstacleAvoidance():
         self.leftBackSensor = self.sensor_dict['u2']
         self.rightFrontSensor = self.sensor_dict['u3']
         self.rightBackSensor = self.sensor_dict['u4']
-        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        self.backSensor = self.sensor_dict['u5']
+
+        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor, self.backSensor]
 
         #initialize sensor difference and limit
         self.leftSensorDifference = 0
@@ -193,7 +195,7 @@ class ObstacleAvoidance():
         reading = responses                             # list
         print(f"Sensor readings: {reading}")
         
-        sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
+        sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:]]
         print(sensor_readings)
         
         for i in range(len(sensor_readings)-1):
@@ -207,8 +209,9 @@ class ObstacleAvoidance():
         self.leftBackSensor = self.sensor_dict['u2']
         self.rightFrontSensor = self.sensor_dict['u3']
         self.rightBackSensor = self.sensor_dict['u4']
+        self.backSensor = self.sensor_dict['u5']
         
-        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor]
+        self.sensor_list = [self.frontSensor, self.leftFrontSensor, self.leftBackSensor, self.rightFrontSensor, self.rightBackSensor, self.backSensor]
         
         return self.sensor_dict
     
