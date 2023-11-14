@@ -2,7 +2,7 @@ import serial
 import time
 
 class PyArduino:
-    def __init__(self, com_port, baud_rate = 9600, timeout = 0.1, keep_all = True, mode = 'FIFO', msg_delim = "\n") -> None:
+    def __init__(self, com_port, baud_rate = 9600, timeout = 0.1, keep_all = True, mode = 'LIFO', msg_delim = "\n") -> None:
         ''' A class that creates a non blocking read write interface with the arduino
 
         com_port -> str:
