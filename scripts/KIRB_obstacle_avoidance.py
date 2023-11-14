@@ -51,104 +51,106 @@ class ObstacleAvoidance():
         self.running = True
 
         # store sensor labels, sensors, and sensor names in lists/dicts
-        self.sensor_name_list = ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
+        # ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
         self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
-        self.sensor_name2reading_dict = {}
-        for l, s in zip(self.sensor_name_list, [None for _ in range(len(self.sensor_name_list))]):
-            self.sensor_name2reading_dict[l] = s
+        self.sensor_label2reading_dict = {}
+        for l, s in zip(self.sensor_label_list, [0 for _ in range(len(self.sensor_name_list))]):
+            self.sensor_label2reading_dict[l] = s
 
-        #initialize sensor difference and limit
-        self.left_sensor_difference = 0
-        self.right_sensor_difference = 0
+        # initialize movement command dict
+        self.mov_dict = {'LT': ['r0--90'],
+                        'RT': ['r0-90'],
+                        'F': ['w0-12'],
+                        'B': ['w0--12'],
+                        'L': ['r0--90', 'w0-12'],
+                        'R': ['r0-90', 'w0-12'],}
+
+        #initialize sensor difference and limit and preset values
+        self.left_sensor_difference = abs(self.left_front_sensor - self.left_back_sensor)
+        self.right_sensor_difference = abs(self.right_front_sensor - self.right_back_sensor)
         self.sensor_difference_limit = 0.15
         self.e_stop_limit = 1.25
+        self.square_dim = 12
         
-    def send_command(self, command=' ua'):
+    def convert_command(self, command_loc):
         '''
-        input: command (str)
-        output: None 
+        input: command from localization module
+        output: command for arduino
 
-        note: need to include a space before command due to bluetooth settings
+        converts command from localization module to command for arduino including distances 
         '''
 
-        transmit(command)
-        time.sleep(1.5)
+        command_ard = self.mov_dict[command_loc]
 
-        pass
+        return command_ard
 
-    def receive_readings(self):
+    def avg_sensor_reading(self, side): ### REVISE
         '''
-        input: None
+        input: side of interest (L or R)
+        output: average sensor reading
+        '''
+
+        if side == 'L':
+            l1 = self.sensor_label2reading_dict['u1']
+            l2 = self.sensor_label2reading_dict['u2']
+            average = (l1 + l2) / 2
+
+        else:
+            r1 = self.sensor_label2reading_dict['u3']
+            r2 = self.sensor_label2reading_dict['u4']
+            average = (r1 + r2) / 2
+            
+        return average
+
+    def receive_readings(self, message):
+        '''
+        input: message from buffer
         output: list of sensor readings in order of F, L, B, R 
             - can be used as input to localization
 
-        note: also stores sensor readings in self.sensor_name2reading_dict 
+        note: also stores sensor readings in self.sensor_label2reading_dict 
         '''
         
+        for sensor in message.split('|')[1:7]:
+            label, reading = sensor.split('=')
+            self.sensor_label2reading_dict[label] = float(reading)
+
+        # sensor_readings = [float(r.split('=')[1]) for r in message.split('|')[1:7]]
+
+        # organize sensor readings in F, L, B, R order
+        f = self.sensor_label2reading_dict['u0']
+        l = self.avg_sensor_reading(side='L')
+        b = self.sensor_label2reading_dict['u5']
+        r = self.avg_sensor_reading(side='R')
+        sensor_readings = [f, l, b, r]
         
-        receiveSerial()
-        reading = responses                             # list
-        print(f"Sensor readings: {reading}")
-        
-        sensor_readings = [float(r.split('=')[1]) for r in reading.split('|')[1:7]]
-        print(sensor_readings)
-        
-        for i in range(len(sensor_readings)-1):
-            self.sensor_name2reading_dict[self.sensor_label_list[i]] = sensor_readings[i]
-
-        # for i in range(len(reading)-1):
-        #     self.sensor_name2reading_dict[self.sensor_label_list[i]] = reading[i]
-        
-        self.front_sensor = self.sensor_name2reading_dict['u0']
-        self.left_front_sensor = self.sensor_name2reading_dict['u1']
-        self.left_back_sensor = self.sensor_name2reading_dict['u2']
-        self.right_front_sensor = self.sensor_name2reading_dict['u3']
-        self.right_back_sensor = self.sensor_name2reading_dict['u4']
-        
-        self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
-        
-        return self.sensor_name2reading_dict
-
-
-
-
-
-
-        # # initialize sensors
-        # self.front_sensor = self.sensor_name2reading_dict['u0']
-        # self.left_front_sensor = self.sensor_name2reading_dict['u1']
-        # self.left_back_sensor = self.sensor_name2reading_dict['u2']
-        # self.right_front_sensor = self.sensor_name2reading_dict['u3']
-        # self.right_back_sensor = self.sensor_name2reading_dict['u4']
-        # self.back_sensor = self.sensor_name2reading_dict['u5']
-        # self.sensor_list = [self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor]
-
+        return sensor_readings
 
     def emergency_stop(self):
         '''
         input: self
-        output: None
+        output: stop command for arduino (' xx')
 
-        emergency stop algorithm comparing front sensor readings and emergency stop limit
+        emergency stop algorithm comparing sensor readings and emergency stop limit
+
+        note: a space is added before the command due to bluetooth settings
         '''
 
-        # check if front sensor reading is less than emergency stop limit
-        print('MIN',min(self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor))
-        if min(self.front_sensor, self.left_front_sensor, self.left_back_sensor, self.right_front_sensor, self.right_back_sensor) < self.e_stop_limit:
-            transmitSerial('xx')
-            self.running = False
+        # check if any sensor reading is less than emergency stop limit
+        if min(self.sensor_label2reading_dict) < self.e_stop_limit: 
             print("Emergency stop!")
-        
+            self.running = False
+            # might change code to move away from closest wall instead of stopping
+            command_ard = ' xx'  
 
-        #### might change code to move away from closest wall instead of stopping ####
-
+        return command_ard
     
     def sensor_diff(self):
         '''
         input: self
         output: None
 
-        calculate sensor differences
+        calculate sensor differences between each set of side sensors
         '''
 
         # find difference between left sensors
@@ -157,17 +159,6 @@ class ObstacleAvoidance():
         # find difference between right sensors
         self.right_sensor_difference = abs(self.right_front_sensor - self.right_back_sensor)
 
-    def move(self, command=' w0-1'):
-        '''
-        input: movement command
-        output: None
-
-        transmits command
-        '''
-
-        transmitSerial(command)
-        time.sleep(0.08)
-    
     def parallel(self):
         '''
         input: self
@@ -190,7 +181,7 @@ class ObstacleAvoidance():
                 # self.sensor_reading(sensor)
                 self.send_command(sensor)
 
-            print('sensor dict', self.sensor_name2reading_dict)
+            print('sensor dict', self.sensor_label2reading_dict)
             # check if emergency stop needed
             self.emergency_stop()
             if (self.running == False):
