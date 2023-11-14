@@ -1,5 +1,5 @@
 import socket
-import serial
+# import serial
 import struct
 import time
 import math
@@ -9,38 +9,38 @@ from datetime import datetime
 
 ##### MOVE TO PYARDUINO #####
 
-def transmitSerial(data):
-    print(data)
+# def transmitSerial(data):
+#     print(data)
     
-    # ser.write(data.encode('ascii'))
-    # ser.write(data.encode())
-    ser.write(bytes(data, 'utf-8'))        # cherry's
-    time.sleep(1)
+#     # ser.write(data.encode('ascii'))
+#     # ser.write(data.encode())
+#     ser.write(bytes(data, 'utf-8'))        # cherry's
+#     time.sleep(1)
 
-def receiveSerial():
-    global responses
-    global time_rx
-    responses = ser.readline().strip().decode('ascii')
-    time.sleep(0.5)    
+# def receiveSerial():
+#     global responses
+#     global time_rx
+#     responses = ser.readline().strip().decode('ascii')
+#     time.sleep(0.5)    
 
-def transmit(data):
-    transmitSerial(data)
+# def transmit(data):
+#     transmitSerial(data)
 
-### Simulate or Run a Rover ###
-SIMULATE = False
+# ### Simulate or Run a Rover ###
+# SIMULATE = False
 
-# ### Network Setup ###
-HOST = '127.0.0.1'  # The server's hostname or IP address
-PORT_TX = 61200     # The port used by the *CLIENT* to receive
-PORT_RX = 61201     # The port used by the *CLIENT* to send data
+# # ### Network Setup ###
+# HOST = '127.0.0.1'  # The server's hostname or IP address
+# PORT_TX = 61200     # The port used by the *CLIENT* to receive
+# PORT_RX = 61201     # The port used by the *CLIENT* to send data
 
-COM_PORT = 'COM7'
+# COM_PORT = 'COM7'
 
-# Create tx and rx threads
-ser = serial.Serial(COM_PORT, 9600, timeout=0)
-Thread(target = receiveSerial, daemon = True).start()
+# # Create tx and rx threads
+# ser = serial.Serial(COM_PORT, 9600, timeout=0)
+# Thread(target = receiveSerial, daemon = True).start()
 
-time.sleep(2)
+# time.sleep(2)
 
 ###################################################################################################
 
@@ -54,7 +54,7 @@ class ObstacleAvoidance():
         # ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
         self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
         self.sensor_label2reading_dict = {}
-        for l, s in zip(self.sensor_label_list, [0 for _ in range(len(self.sensor_name_list))]):
+        for l, s in zip(self.sensor_label_list, [0 for _ in range(len(self.sensor_label_list))]):
             self.sensor_label2reading_dict[l] = s
 
         # initialize movement command dict
@@ -66,8 +66,8 @@ class ObstacleAvoidance():
                         'R': ['r0-90', 'w0-12'],}
 
         #initialize sensor difference and limit and preset values
-        self.left_sensor_difference = abs(self.left_front_sensor - self.left_back_sensor)
-        self.right_sensor_difference = abs(self.right_front_sensor - self.right_back_sensor)
+        self.left_sensor_difference = 0
+        self.right_sensor_difference = 0
         self.sensor_difference_limit = 0.15
         self.e_stop_limit = 1.25
         self.square_dim = 12
@@ -91,14 +91,13 @@ class ObstacleAvoidance():
         '''
 
         if side == 'L':
-            l1 = self.sensor_label2reading_dict['u1']
-            l2 = self.sensor_label2reading_dict['u2']
-            average = (l1 + l2) / 2
+            s1 = self.sensor_label2reading_dict['u1']
+            s2 = self.sensor_label2reading_dict['u2']
 
         else:
-            r1 = self.sensor_label2reading_dict['u3']
-            r2 = self.sensor_label2reading_dict['u4']
-            average = (r1 + r2) / 2
+            s1 = self.sensor_label2reading_dict['u3']
+            s2 = self.sensor_label2reading_dict['u4']
+        average = (s1 + s2) / 2
             
         return average
 
@@ -126,6 +125,7 @@ class ObstacleAvoidance():
         
         return sensor_readings
 
+    # should move to arduino
     def emergency_stop(self):
         '''
         input: self
@@ -154,38 +154,133 @@ class ObstacleAvoidance():
         '''
 
         # find difference between left sensors
-        self.left_sensor_difference = abs(self.left_front_sensor - self.left_back_sensor)
+        self.left_sensor_difference = abs(self.sensor_label2reading_dict['u1'] - self.sensor_label2reading_dict['u2'])
 
         # find difference between right sensors
-        self.right_sensor_difference = abs(self.right_front_sensor - self.right_back_sensor)
+        self.right_sensor_difference = abs(self.sensor_label2reading_dict['u3'] - self.sensor_label2reading_dict['u4'])
 
     def parallel(self):
         '''
         input: self
-        return: None
-
-        parallel alignment algorithm to have one side (left/right) of the robot to align parallel with a wall
+        return: closest side for alignment (L, R, None)
         '''
 
-        # initial command - not registered
-        # transmitSerial(' r0-90')
+        self.sensor_diff()
 
-        # start by rotating 90 degrees (test)
-        # transmitSerial(' r0-90')
-        time.sleep(0.2)
+        if max(self.left_sensor_difference, self.right_sensor_difference) < self.sensor_difference_limit:
+            return None
+        
+        elif self.left_sensor_difference > self.right_sensor_difference:
+            return 'L'
+        
+        else:
+            return 'R'
 
-        while (self.running == True): # (self.PARALLEL == False) 
+    def get_closest(self, side):
+        '''
+        input
+        '''
+    
+    def right_parallel(self):
+        '''
+        input: self
+        output: command for parallel alignment 
+        '''
 
-            # check sensors, order: front -> front left -> back left -> front right -> back right
-            for sensor in [' ua']: #[' ua',' u0', ' u1', ' u2', ' u3', ' u4']:
-                # self.sensor_reading(sensor)
-                self.send_command(sensor)
+        if 
 
-            print('sensor dict', self.sensor_label2reading_dict)
-            # check if emergency stop needed
-            self.emergency_stop()
-            if (self.running == False):
-                break
+        # ROVER IS NOT PARALLEL
+        # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
+        if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
+            
+                
+                # CONDITION #1: 45deg placement
+                closest = self.sensor_list.index(min(self.sensor_list[1:]))
+                
+                # TURN 4 DEG WHEN NOT ALIGNED
+                # front left is closest
+                if closest == 1:
+                    self.move(' r0-4')
+            
+                # back left is closest
+                elif closest == 2:
+                    self.move(' r0--4')
+
+                # front right is closest
+                elif closest == 3:
+                    self.move(' r0--4')
+
+                # back right is closest
+                elif closest == 4:
+                    self.move(' r0-4')
+
+                
+                # CONDITION #2: 3-way/4-way intersection (NOT AT WALL YET)
+                if self.front_sensor >= 2.5:
+                    self.move(' w0-1')
+
+                # CONDITION #3: 3-way/4-way intersection (AT THE WALL)
+                elif self.front_sensor < 2.5:
+                    
+                    # 3 way intersection
+                        # if this localizing, turn toward closest side
+                        # if this is dropping block off at B site, turn towards B site specified
+                        
+                    # 4 way interestion
+                        # idk yet depends on where its going
+                        
+                    #placeholder move back 1 inch
+                    self.move(' w0--1')
+
+        
+            # LEFT SIDE IS NOT PARALLEL
+            elif self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference < self.sensor_difference_limit:
+                print("Left side not parallel...")
+                
+                #if 
+                if self.front_sensor >= 2.25:
+                    # move forward 1 inch
+                    self.move(' w0-1')
+                
+                # rover is parallel, if less than 3, make a uturn
+                elif self.front_sensor < 2.25:
+                    
+                    self.move(' r0--90')
+                    print("LEFT TURN")
+            
+            # RIGHT SIDE IS NOT PARALLEL    
+            elif self.right_sensor_difference > self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
+                print("Right side not parallel...")
+                
+                if self.front_sensor >= 2.25:
+                    # move forward 1 inch
+                    self.move(' w0-1')
+                    print("FORWARD ONE INCH")
+                
+                # rover is parallel, if less than 3, make a uturn
+                elif self.front_sensor < 2.25:
+                    
+                    self.move(' r0-90')
+                    print("RIGHT TURN")
+
+
+
+
+
+
+
+        # while (self.running == True): # (self.PARALLEL == False) 
+
+        #     # check sensors, order: front -> front left -> back left -> front right -> back right
+        #     for sensor in [' ua']: #[' ua',' u0', ' u1', ' u2', ' u3', ' u4']:
+        #         # self.sensor_reading(sensor)
+        #         self.send_command(sensor)
+
+        #     print('sensor dict', self.sensor_label2reading_dict)
+        #     # check if emergency stop needed
+        #     self.emergency_stop()
+        #     if (self.running == False):
+        #         break
 
             # ROVER IS NOT PARALLEL
             self.sensor_diff()
@@ -300,4 +395,7 @@ class ObstacleAvoidance():
 # Thread(target = receive, daemon = True).start()
 
 OA = ObstacleAvoidance()
-OA.parallel()
+print(OA.left_sensor_difference)
+OA.sensor_label2reading_dict['u1'] = 5
+OA.sensor_diff()
+print(OA.left_sensor_difference)
