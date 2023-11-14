@@ -1,5 +1,5 @@
 import socket
-# import serial
+import serial
 import struct
 import time
 import math
@@ -322,10 +322,10 @@ class ObstacleAvoidance():
         # ROVER IS PARALLEL
         elif self.right_sensor_difference < self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
             
-            if self.front_sensor >= 2.25:
+            if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
                 # move forward 1 inch
                 self.move(' w0-1')
-                print("rOVER PARALLEL. FORWARD ONE INCH.")
+                # print("rOVER PARALLEL. FORWARD ONE INCH.")
 
             # elif self.front_sensor < 2.25:
             #     if self.left_front_sensor > self.right_front_sensor:
@@ -344,7 +344,4 @@ class ObstacleAvoidance():
 
 
 OA = ObstacleAvoidance()
-print(OA.left_sensor_difference)
-OA.sensor_label2reading_dict['u1'] = 5
-OA.sensor_diff()
-print(OA.left_sensor_difference)
+print(OA.initial_navigation())
