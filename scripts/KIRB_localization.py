@@ -389,7 +389,7 @@ class MazeLocalization():
 
         # if rotation is required, return rotation command to main script
         if rotation == True:
-            return self.localized, square_heading_pairs, 'RT' # RT = right turn, can change right turn command later to fit generalized command
+            return self.localized, square_heading_pairs, ['RT'] # RT = right turn, can change right turn command later to fit generalized command
 
         # get probabilities for all potential square label and heading pairs
         square_heading_pairs_reordered, square_probs = self.square_prob(sensor_readings, square_heading_pairs)
