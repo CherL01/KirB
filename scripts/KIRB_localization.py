@@ -55,7 +55,7 @@ class MazeLocalization():
         self.wall_limit = 4
 
         # sensor noise
-        self.sensor_noise = 20
+        self.sensor_noise = 2
 
         # probability threshold (diff between highest and second highest prob for robot to be considered localized)
         self.prob_threshold = 0.5
@@ -395,6 +395,8 @@ class MazeLocalization():
 
         # get probabilities for all potential square label and heading pairs
         square_heading_pairs_reordered, square_probs = self.square_prob(sensor_readings, square_heading_pairs)
+        print('square heading pairs reordered: ', square_heading_pairs_reordered)
+        print('square probs: ', square_probs)
         self.square_heading_pairs = square_heading_pairs_reordered
 
         # set initial as False because will move from initial square
@@ -402,6 +404,7 @@ class MazeLocalization():
 
         # get movement command to continue localization
         movement = self.get_movement(sensor_readings)
+        print('next movement: ', movement)
         self.last_movement = movement
 
         return self.localized, self.square_heading_pairs, movement
@@ -414,9 +417,13 @@ class MazeLocalization():
 
         # # if robot is not localized
         # elif self.localized == False:
+        
+        print('localized (SHOULD RETURN FALSE): ', self.localized)
 
         # get probabilities for new potential square label and heading pairs
         new_square_heading_pairs_reordered, new_square_probs = self.prob_after_moving(self.last_movement, sensor_readings, self.square_heading_pairs)
+        print('new square heading pairs: ', new_square_heading_pairs_reordered)
+        print('new square prob: ', new_square_probs)
         self.square_heading_pairs = new_square_heading_pairs_reordered
 
         # if one probability is significantly higher than the rest of the probabilities, then robot has localized
@@ -424,12 +431,14 @@ class MazeLocalization():
             # set localized as true to continue to navigation
             self.localized = True
             self.current_location = self.square_heading_pairs[0]
+            print('current location: ', self.current_location)
         
             return self.localized, self.current_location, ['']
         
 
         # get movement command to continue localization
         movement = self.get_movement(sensor_readings)
+        print('continue localization - next movement: ', movement)
         self.last_movement = movement
 
         return self.localized, self.square_heading_pairs, movement
