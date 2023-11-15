@@ -7,7 +7,9 @@ from threading import Thread
 import _thread
 from datetime import datetime
 
-from KIRB_python_arduino import PyArduino as PA
+from KIRB_python_arduino import PyArduino 
+
+PA = PyArduino(com_port="COM12")
 
 ##### MOVE TO PYARDUINO #####
 
@@ -82,7 +84,7 @@ class ObstacleAvoidance():
     def emergency_stop(self):
         '''
         input: self
-        output: stop command for arduino (' xx')
+        output: None
 
         emergency stop algorithm comparing sensor readings and emergency stop limit
 
@@ -90,13 +92,12 @@ class ObstacleAvoidance():
         '''
 
         # check if any sensor reading is less than emergency stop limit
-        if min(self.sensor_label2reading_dict) < self.e_stop_limit: 
+        if self.sensor_label2reading_dict[min(self.sensor_label2reading_dict)] < self.e_stop_limit: 
             print("Emergency stop!")
             self.running = False
             # might change code to move away from closest wall instead of stopping
-            command_ard = ' xx'  
+            self.move(' xx')
 
-        return command_ard
     
     def front_wall_detection(self):
         '''
@@ -105,7 +106,9 @@ class ObstacleAvoidance():
         '''
 
         # get front sensor reading
+        self.get_sensor_readings()
         front_sensor = self.sensor_label2reading_dict['u0']
+        print('front sensor: ', front_sensor)
 
         # if wall not detected in front, return False
         if front_sensor > self.wall_limit:
@@ -123,6 +126,7 @@ class ObstacleAvoidance():
 
         # travels through the maze purely on obstale avoidance until front wall detected
         while self.front_wall_detection() == False:
+            print('attempt to run parallel')
             self.parallel()
 
         return True
@@ -153,14 +157,22 @@ class ObstacleAvoidance():
 
         note: also stores sensor readings in self.sensor_label2reading_dict 
         '''
-        
+
         # get message from buffer
-        message = PA.pop_read()
+        message = PA.blocking_read()
+
+        print('message: ', message)
 
         # split sensor readings and store in init variables
-        for sensor in message.split('|')[1:7]:
-            label, reading = sensor.split('=')
-            self.sensor_label2reading_dict[label] = float(reading)
+        for sensor in message.split('|')[:6]:
+            try:
+                label, reading = sensor.split('=')
+                self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
+
+            except ValueError:
+                break
+
+        # print('sensor reading dict: ', self.sensor_label2reading_dict)
 
         # organize sensor readings in F, L, B, R order
         f = self.sensor_label2reading_dict['u0']
@@ -233,10 +245,10 @@ class ObstacleAvoidance():
         return: False if emergency stop activated, True otherwise
         '''
 
-        # get sensor readings
-        _ = self.get_sensor_readings()
+        # # get sensor readings
+        # _ = self.get_sensor_readings()
 
-        print('sensor reading dict: ', self.sensor_label2reading_dict)
+        print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
 
         # check if emergency stop needed
         self.emergency_stop()
@@ -246,49 +258,55 @@ class ObstacleAvoidance():
         self.sensor_diff()
 
         # ROVER IS NOT PARALLEL
-        if max(self.left_sensor_difference, self.right_sensor_difference) > self.sensor_difference_limit:
-
-            closest_sensor, _ = self.get_closest()
+        # if max(self.left_sensor_difference, self.right_sensor_difference) > self.sensor_difference_limit:
+        #     print('NOT PARALLEL')
+        
+        closest_sensor, _ = self.get_closest()
+        print('closest sensor: ', closest_sensor)
+        # self.move(' w0-1')
+        
+        # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
+        if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
             
-            # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
-            if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
-                
-                print("Both sides not parallel...")
+            print("Both sides not parallel...")
 
-                # CONDITION #1: 45deg placement
-                # TURN 4 DEG WHEN NOT ALIGNED
-                # front left is closest
-                if closest_sensor == 'u1':
-                    self.move(' r0-4')
-            
-                # back left is closest
-                elif closest_sensor == 'u2':
-                    self.move(' r0--4')
-                    self.move(' w0-1')
+            # CONDITION #1: 45deg placement
+            # TURN 4 DEG WHEN NOT ALIGNED
+            # front left is closest
+            if closest_sensor == 'u1':
+                print('front left closest: r0-4')
+                self.move(' r0-4')
+        
+            # back left is closest
+            elif closest_sensor == 'u2':
+                print('back left closest: r0--4')
+                self.move(' r0--4')
 
-                # front right is closest
-                elif closest_sensor == 'u3':
-                    self.move(' r0--4')
+            # front right is closest
+            elif closest_sensor == 'u3':
+                print('front right closest: r0--4')
+                self.move(' r0--4')
 
-                # back right is closest
-                elif closest_sensor == 'u4':
-                    self.move(' r0-4')
+            # back right is closest
+            elif closest_sensor == 'u4':
+                print('back right closest: r0-4')
+                self.move(' r0-4')
 
-                # if there is room in front, travel forward one inch
-                if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                    self.move(' w0-1')
+            # if there is room in front, travel forward one inch
+            if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+                self.move(' w0-1')
 
-                # if no room in front, back up two inches
-                else:
-                    # 3 way intersection
-                        # if this localizing, turn toward closest side
-                        # if this is dropping block off at B site, turn towards B site specified
-                        
-                    # 4 way interestion
-                        # idk yet depends on where its going
-                        
-                    #placeholder move back 2 inch to give more room?
-                    self.move(' w0--2')
+            # if no room in front, back up two inches
+            else:
+                # 3 way intersection
+                    # if this localizing, turn toward closest side
+                    # if this is dropping block off at B site, turn towards B site specified
+                    
+                # 4 way interestion
+                    # idk yet depends on where its going
+                    
+                #placeholder move back 2 inch to give more room?
+                self.move(' w0--2')
 
         # LEFT SIDE IS NOT PARALLEL
         elif self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference < self.sensor_difference_limit:
@@ -344,4 +362,4 @@ class ObstacleAvoidance():
 
 
 OA = ObstacleAvoidance()
-print(OA.initial_navigation())
+print('initial navigation: ', OA.initial_navigation())

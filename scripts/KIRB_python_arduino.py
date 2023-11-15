@@ -65,16 +65,16 @@ class PyArduino:
             if reading is not None:
                 return reading
 
-if __name__ == "__main__":
-    arduino = PyArduino(com_port="COM9")
-    while True:
-        inp = input("Give a command via keyboard\n")
-        start = time.time()
-        arduino.write(inp)
-        print("Waiting for Arduino Output:")
-        print(arduino.blocking_read())
-        print("Output finished")
-        print(f"Time taken: {time.time() - start}")
+# if __name__ == "__main__":
+#     arduino = PyArduino(com_port="COM10")
+#     while True:
+#         inp = input("Give a command via keyboard\n")
+#         start = time.time()
+#         arduino.write(inp)
+#         print("Waiting for Arduino Output:")
+#         print(arduino.blocking_read())
+#         print("Output finished")
+#         print(f"Time taken: {time.time() - start}")
 
 # from KIRB_ob"stacle_avoidance_v2 import ObstacleAvoidance
 
