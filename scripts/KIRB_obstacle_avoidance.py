@@ -118,10 +118,42 @@ class ObstacleAvoidance():
         '''
 
         # get direction of turn and degree
-        turn_deg = [*command].index('-')
+        turn_deg = int(command.split('-')[-1])
 
-        while turn_deg > 0:
-            self.move(' r0')
+        if '--' in command:
+            while turn_deg > 0:
+                self.move(' r0--4')
+                if self.sensor_label2reading_dict['u5']:
+                    self.move(' w0--1')
+                turn_deg -= 4
+
+        elif '-' in turn_deg:
+            while turn_deg > 0:
+                self.move(' r0--4')
+                if self.sensor_label2reading_dict['u5']:
+                    self.move(' w0--1')
+                turn_deg -= 4
+
+    def travel_straight(self, command):
+        '''
+        input: travel straight command
+        output: None
+
+        converts travelling straight command into smaller movements for smoother travelling
+        '''
+
+        # get direction of turn and degree
+        distance = int(command.split('-')[-1])
+
+        if '--' in command:
+            while distance > 0:
+                self.move(' w0--1')
+                distance -= 1
+
+        elif '-' in command:
+            while distance > 0:
+                self.move(' w0-1')
+                distance -= 1
 
 
     def localizable_square_detection(self):
@@ -465,13 +497,17 @@ class ObstacleAvoidance():
                     self.parallel()
 
                     print('command (during navigation): ', command)
-                    self.move(command)
+                    if 'w' in command:
+                        self.travel_straight(command)
+
+                    elif 'r' in command:
+                        self.turn(command)
 
                     # MAY MOVE THIS SOMEWHERE ELSE
                     self.parallel()
                 
-                    # give time for robot to travel in maze
-                    time.sleep(2)
+                # give time for robot to travel in maze
+                time.sleep(5)
 
                 # run localize again
                 sensors_list = self.get_sensor_readings()
