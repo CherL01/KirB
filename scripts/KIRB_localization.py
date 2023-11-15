@@ -55,10 +55,10 @@ class MazeLocalization():
         self.wall_limit = 4
 
         # sensor noise
-        self.sensor_noise = 2
+        self.sensor_noise = 20
 
         # probability threshold (diff between highest and second highest prob for robot to be considered localized)
-        self.prob_threshold = 0.00005
+        self.prob_threshold = 0.5
     
     def make_movement(self, current_loc, heading, mov_direction, turn = True):
         """ 
@@ -386,9 +386,11 @@ class MazeLocalization():
 
         # get square labels, headings, if rotation is required
         square_heading_pairs, rotation = self.potential_square_heading_pairs(sensor_readings)
+        print('square heading pairs: ', square_heading_pairs)
 
         # if rotation is required, return rotation command to main script
         if rotation == True:
+            print('localized (KIRB_localization): ', self.localized)
             return self.localized, square_heading_pairs, ['RT'] # RT = right turn, can change right turn command later to fit generalized command
 
         # get probabilities for all potential square label and heading pairs

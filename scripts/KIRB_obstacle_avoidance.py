@@ -8,9 +8,10 @@ import _thread
 from datetime import datetime
 
 from KIRB_python_arduino import PyArduino 
-from KIRB_localization import MazeLocalization as ML
+from KIRB_localization import MazeLocalization
 
 PA = PyArduino(com_port="COM12")
+ML = MazeLocalization()
 
 ##### MOVE TO PYARDUINO #####
 
@@ -63,20 +64,20 @@ class ObstacleAvoidance():
             self.sensor_label2reading_dict[l] = s
 
         # initialize movement command dict
-        self.mov_dict = {'LT': ['r0--90'],
-                        'RT': ['r0-90'],
-                        'F': ['w0-12'],
-                        'B': ['w0--12'],
-                        'L': ['r0--90', 'w0-12'],
-                        'R': ['r0-90', 'w0-12'],}
+        self.mov_dict = {'LT': [' r0--90'],
+                        'RT': [' r0-90'],
+                        'F': [' w0-12'],
+                        'B': [' w0--12'],
+                        'L': [' r0--90', ' w0-12'],
+                        'R': [' r0-90', ' w0-12'],}
 
         #initialize sensor difference and limit and preset values
         self.left_sensor_difference = 0
         self.right_sensor_difference = 0
         self.sensor_difference_limit = 0.15
-        self.e_stop_limit = 1.25
+        self.e_stop_limit = 1.5
         self.square_dim = 12
-        self.forward_limit = 2.5
+        self.forward_limit = 2.8
         
     # should move to arduino
     def emergency_stop(self):
@@ -92,29 +93,55 @@ class ObstacleAvoidance():
         # check if any sensor reading is less than emergency stop limit
         if self.sensor_label2reading_dict[min(self.sensor_label2reading_dict)] < self.e_stop_limit: 
             print("Emergency stop!")
-            self.running = False
+            # self.running = False
             # might change code to move away from closest wall instead of stopping
-            self.move(' xx')
+            self.move(' r0-90')
 
-    
-    def front_wall_detection(self):
+    def detect_wall(self, reading):
         '''
-        input: self
-        output: True if navigated to a wall at the front, False otherwise
+        input: sensor reading
+        output: True if there is an immediate wall, False otherwise
         '''
 
-        # get front sensor reading
-        self.get_sensor_readings()
-        front_sensor = self.sensor_label2reading_dict['u0']
-        print('front sensor: ', front_sensor)
-
-        # if wall not detected in front, return False
-        if front_sensor > self.forward_limit:
+        if reading > ML.wall_limit:
             return False
         
-        # if wall detected in front, return True
-        else: 
+        else:
             return True
+
+    # def turn()
+
+    def localizable_square_detection(self):
+        '''
+        input: self
+        output: True if navigated to a square that is localizable, False otherwise
+        '''
+
+        # get all sensor readings
+        self.get_sensor_readings()
+        front_sensor = self.sensor_label2reading_dict['u0']
+        back_sensor = self.sensor_label2reading_dict['u5']
+        left_sensor = self.avg_sensor_reading('L')
+        right_sensor = self.avg_sensor_reading('R')
+        print('front sensor: ', front_sensor)
+        print('back sensor: ', back_sensor)
+        print('left sensor: ', left_sensor)
+        print('right sensor: ', right_sensor)
+
+        # if wall not detected in front, return False
+        if not self.detect_wall(front_sensor):
+            return False
+        
+        # if wall detected in front
+        else:
+
+            # if back wall detected
+            if self.detect_wall(back_sensor):
+                self.move(' r0-90')
+                return False
+            
+            else:
+                return True
     
     def avg_sensor_reading(self, side): ### REVISE
         '''
@@ -198,6 +225,9 @@ class ObstacleAvoidance():
     
         PA.write(command)
 
+        # # may change the sleep time
+        # time.sleep(0.5)
+
     def convert_command(self, command_loc):
         '''
         input: command from localization module
@@ -232,20 +262,23 @@ class ObstacleAvoidance():
 
         print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
 
-        # check if emergency stop needed
-        self.emergency_stop()
-        if self.running == False:
-            return self.running
+        # # check if emergency stop needed
+        # self.emergency_stop()
+        # if self.running == False:
+        #     return self.running
 
         self.sensor_diff()
         
         closest_sensor, _ = self.get_closest()
         print('closest sensor: ', closest_sensor)
+
+        print('left sensor diff: ', self.left_sensor_difference)
+        print('right sensor diff: ', self.right_sensor_difference)
         
-        # NEITHER SIDE IS PARALLEL (Ex: Rover is 45 degrees or entered 3-way/4-way intersection)
+        # both sides are over sensor difference limit
         if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
             
-            print("Both sides not parallel...")
+            print("Both sides over sensor limit")
 
             # CONDITION #1: 45deg placement
             # TURN 4 DEG WHEN NOT ALIGNED
@@ -269,39 +302,71 @@ class ObstacleAvoidance():
                 print('back right closest: r0-4')
                 self.move(' r0-4')
 
-            # if there is room in front, travel forward one inch
-            if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                self.move(' w0-1')
+        # if there is room in front, travel forward one inch
+        if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+            self.move(' w0-1')
 
-            # if no room in front, back up two inches
-            else:
+            # # if no room in front, back up two inches
+            # else:
                     
-                #placeholder move back 2 inch to give more room?
-                self.move(' w0--2')
+            #     #placeholder move back 2 inch to give more room?
+            #     self.move(' w0--2')
 
-        # LEFT SIDE IS NOT PARALLEL
-        elif self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference < self.sensor_difference_limit:
-            print("Left side not parallel...")
-            
-            #if front sensot has room, follow right wall and move forward one inch
-            if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                # move forward 1 inch
-                self.move(' w0-1')
+        # else:
+        #     # if there is room in front, travel forward one inch
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         self.move(' w0-1')
 
-        # RIGHT SIDE IS NOT PARALLEL    
-        elif self.right_sensor_difference > self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
-            print("Right side not parallel...")
-            
-            if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                # move forward 1 inch
-                self.move(' w0-1')
 
-        # ROVER IS PARALLEL
-        elif self.right_sensor_difference < self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
+        # # if left sensor difference is less than sensor difference limit and less than right sensor difference
+        # elif self.left_sensor_difference < self.right_sensor_difference and self.left_sensor_difference < self.sensor_difference_limit and self.avg_sensor_reading('L') > self.e_stop_limit:
+        #     print("Right side over sensor limit")
             
-            if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                # move forward 1 inch
-                self.move(' w0-1')
+        #     #if front sensot has room, follow right wall and move forward one inch
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         # move forward 1 inch
+        #         self.move(' w0-1')
+
+        # # if right sensor difference is less than sensor difference limit and less than left sensor difference
+        # elif self.right_sensor_difference < self.left_sensor_difference and self.right_sensor_difference < self.sensor_difference_limit and self.avg_sensor_reading('R') > self.e_stop_limit:
+        #     print("Left side over sensor limit")
+            
+        #     #if front sensot has room, follow right wall and move forward one inch
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         # move forward 1 inch
+        #         self.move(' w0-1')
+
+        # # left and right sensor differences are the same
+        # else:
+        #     #if front sensot has room, follow right wall and move forward one inch
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         # move forward 1 inch
+        #         self.move(' w0-1')
+
+
+        # # LEFT SIDE IS NOT PARALLEL
+        # elif self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference < self.sensor_difference_limit:
+        #     print("Left side not parallel...")
+            
+        #     #if front sensot has room, follow right wall and move forward one inch
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         # move forward 1 inch
+        #         self.move(' w0-1')
+
+        # # RIGHT SIDE IS NOT PARALLEL    
+        # elif self.right_sensor_difference > self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
+        #     print("Right side not parallel...")
+            
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         # move forward 1 inch
+        #         self.move(' w0-1')
+
+        # # ROVER IS PARALLEL
+        # elif self.right_sensor_difference < self.sensor_difference_limit and self.left_sensor_difference < self.sensor_difference_limit:
+            
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         # move forward 1 inch
+        #         self.move(' w0-1')
 
     def initial_navigation(self):
         '''
@@ -311,11 +376,16 @@ class ObstacleAvoidance():
         runs until initial navigation is completed
         '''
 
-        # travels through the maze purely on obstale avoidance until front wall detected
-        while self.front_wall_detection() == False:
+        # # request for sensor readings
+        # self.move( 'ua')
+
+        # travels through the maze purely on obstale avoidance until robot is in a localizable square
+        while self.localizable_square_detection() == False:
             print('attempt to run parallel')
             self.parallel()
 
+        print('localizable square found!')
+        
     def localize_and_navigate(self, zone, location=None):
         '''
         input: zone for navigation
@@ -326,20 +396,38 @@ class ObstacleAvoidance():
 
         # get sensor readings in a list
         sensors_list = self.get_sensor_readings()
+        print('sensor list 1: ', sensors_list)
 
-        # loops until localization in initial square is complete
-        while ML.initial_localize(sensors_list)[-1] != ['RT']:
-            _, _, command_loc = ML.initial_localize(sensors_list)
+        # run localization in initial square 
+        _, _, command_loc = ML.initial_localize(sensors_list)
+
+        if command_loc == ['RT']:
+
             command_ard = self.convert_command(command_loc[0])
-
+                
             for command in command_ard:
                 self.move(command)
 
+            # get sensor readings in a list
             sensors_list = self.get_sensor_readings()
+            print('sensor list 2: ', sensors_list)
+
+            # run localization in initial square 
+            _, _, command_loc = ML.initial_localize(sensors_list)
+            # command_ard = self.convert_command(command_loc[0])
+                
+            # for command in command_ard:
+            #     self.move(command)
+
 
         # loops until localization is fully complete
-        while ML.localize(sensors_list)[0] != True:
-            _, _, command_loc = ML.initial_localize(sensors_list)
+        while True:
+            localized, _, command_loc = ML.localize(sensors_list)
+            print('localized: ', localized)
+
+            if localized:
+                break
+
             command_ard = self.convert_command(command_loc[0])
 
             for command in command_ard:
@@ -350,9 +438,10 @@ class ObstacleAvoidance():
         # navigate to loading zone
         if zone == 'loading zone':
             path, movements = ML.lz_navigation()
+            print('localization zone path: ', path)
 
             # get square, heading, and navigation command
-            for square, (heading, command_nav) in zip(path[1:], movements):
+            for square, (command_nav, heading) in zip(path[1:], movements):
                 print(square, heading)
                 command_ard = self.convert_command(command_nav[0])
 
@@ -375,7 +464,7 @@ class ObstacleAvoidance():
             path, movements = ML.doz_navigation(location)
 
             # get square, heading, and navigation command
-            for square, (heading, command_nav) in zip(path[1:], movements):
+            for square, (command_nav, heading) in zip(path[1:], movements):
                 print(square, heading)
                 command_ard = self.convert_command(command_nav[0])
 
@@ -394,6 +483,10 @@ class ObstacleAvoidance():
 drop_off_loc = 'A6'
 
 OA = ObstacleAvoidance()
+
+# navigates to a localizable square
 OA.initial_navigation()
+
+# tries to localize then navigate to wherever
 OA.localize_and_navigate('loading zone')
-OA.localize_and_navigate('drop off zone', drop_off_loc)
+# OA.localize_and_navigate('drop off zone', drop_off_loc)
