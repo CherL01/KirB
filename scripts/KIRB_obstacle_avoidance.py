@@ -10,7 +10,7 @@ from datetime import datetime
 from KIRB_python_arduino import PyArduino 
 from KIRB_localization import MazeLocalization
 
-PA = PyArduino(com_port="COM12")
+PA = PyArduino(com_port="COM7")
 ML = MazeLocalization()
 
 ##### MOVE TO PYARDUINO #####
@@ -318,6 +318,8 @@ class ObstacleAvoidance():
         # if there is room in front, travel forward one inch
         if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
             self.move(' w0-1')
+        else:
+            self.move(' w0--1')
 
             # # if no room in front, back up two inches
             # else:
@@ -455,13 +457,14 @@ class ObstacleAvoidance():
 
             # get square, heading, and navigation command
             for square, (command_nav, heading) in zip(path[1:], movements):
-                print(square, heading)
+                print('current square and heading: ', square, heading)
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
                     # MAY MOVE THIS SOMEWHERE ELSE
                     self.parallel()
 
+                    print('command (during navigation): ', command)
                     self.move(command)
 
                     # MAY MOVE THIS SOMEWHERE ELSE
