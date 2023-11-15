@@ -11,13 +11,13 @@ SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
 #define TRIGGER_PIN3          50    // Left back
 #define TRIGGER_PIN4          51    // Right front
 #define TRIGGER_PIN5          52    // Right back
-#define TRIGGER_PIN6          53    // Front bottom (block detection)
+#define TRIGGER_PIN6          53    // Back
 #define ECHO_PIN1             8     // Front sensor
 #define ECHO_PIN2             9     // Left front
 #define ECHO_PIN3             10    // Left back
 #define ECHO_PIN4             11    // Right front
 #define ECHO_PIN5             12    // Right back
-#define ECHO_PIN6             13    // Front bottom (block detection)
+#define ECHO_PIN6             13    // Back
 #define MaxDistance           200
 
 NewPing sonar1(TRIGGER_PIN1, ECHO_PIN1, MaxDistance);
@@ -79,7 +79,21 @@ void setup() {
 }
 
 void loop() {
-    
+
+
+  //get all sensor readings at once (with command ua)
+  int numAvg = 2;       // total avg time
+  float distanceBuffer[6];
+  String strBuffer;
+  for (int i=0; i<6; i++) {
+    distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
+    strBuffer += (String)i;
+    strBuffer += "=";
+    strBuffer += distanceBuffer[i];
+    strBuffer += " | ";
+  }
+  Serial.println(strBuffer);
+        
   // Read what is entered into serial monitor or bluetooth
   if (Serial.available()) {
     BTSerial.write(Serial.read());
@@ -124,38 +138,12 @@ void loop() {
     }
   }
 
-  // display encoder values
-  delay(100);
-  Serial.print("Left | Right - motor count: ");
-  Serial.print(leftMotorCount);
-  Serial.print(" | ");
-  Serial.println(rightMotorCount);
-
-  float ReadUltrasonicSensor(int sensorNum, int numAvg) {
-
-  float tempVal = 0.0;
-
-  for (int i=0; i< numAvg; i++) {
-    delay(50);
-    float echoCM = 0;
-    if (sensorNum == 1) {
-      echoCM = sonar1.ping_cm();
-    } else if (sensorNum == 2) {
-      echoCM = sonar2.ping_cm();
-    } else if (sensorNum == 3) {
-      echoCM = sonar3.ping_cm();
-    } else if (sensorNum == 4) {
-      echoCM = sonar4.ping_cm();
-    } else if (sensorNum == 5) {
-      echoCM = sonar5.ping_cm();
-    } else if (sensorNum == 6) {
-      echoCM = sonar6.ping_cm();
-    }
-    tempVal+= echoCM/2.54;    // convert to inches
-  }
-  return tempVal / ((float)numAvg);
-}
-  
+//   // display encoder values
+//   delay(100);
+//   Serial.print("Left | Right - motor count: ");
+//   Serial.print(leftMotorCount);
+//   Serial.print(" | ");
+//   Serial.println(rightMotorCount);
 }
 
 void InitMotors(void) {
@@ -339,5 +327,3 @@ int TimeElapsed(float currentMillis) {
   Serial.print("Time Elapsed: ");
   Serial.println(timeElapsed);      // prints the time elapsed
 }
-
-

@@ -92,6 +92,19 @@ void setup() {
 
 void loop() {
     
+  //get all sensor readings at once (with command ua)
+  int numAvg = 2;       // total avg time
+  float distanceBuffer[6];
+  String strBuffer;
+  for (int i=0; i<6; i++) {
+    distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
+    strBuffer += (String)i;
+    strBuffer += "=";
+    strBuffer += distanceBuffer[i];
+    strBuffer += " | ";
+  }
+  Serial.println(strBuffer);
+  
   // Read what is entered into serial monitor or bluetooth
   if (Serial.available()) {
     BTSerial.write(Serial.read());
