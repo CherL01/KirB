@@ -235,7 +235,7 @@ class ObstacleAvoidance():
         input: command
         output: None
         '''
-    
+        
         PA.write(command)
 
         # # may change the sleep time
@@ -288,6 +288,24 @@ class ObstacleAvoidance():
         print('left sensor diff: ', self.left_sensor_difference)
         print('right sensor diff: ', self.right_sensor_difference)
         
+        #########
+        #check left & right side difference to centre itself
+        
+        l_sense = (self.sensor_label2reading_dict['u1']+self.sensor_label2reading_dict['u2'])/2
+        r_sense = (self.sensor_label2reading_dict['u3']+self.sensor_label2reading_dict['u4'])/2
+        #case when KIRB is in hallway
+        if (l_sense + r_sense) < 10:
+            
+            #when left is more open
+            if l_sense > r_sense + 2:
+                self.move(' r0--4')
+            
+            #when right is more open
+            if r_sense > l_sense + 2:
+                self.move(' r0-4')
+                
+        #############
+                
         # both sides are over sensor difference limit
         if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
             
