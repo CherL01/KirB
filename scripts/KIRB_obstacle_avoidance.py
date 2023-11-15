@@ -454,7 +454,11 @@ class ObstacleAvoidance():
                 
             for command in command_ard:
                 print('initial localize command: ', command)
-                self.move(command)
+                if 'w' in command:
+                        self.travel_straight(command)
+
+                elif 'r' in command:
+                    self.turn(command)
 
             # get sensor readings in a list
             sensors_list = self.get_sensor_readings()
@@ -483,7 +487,11 @@ class ObstacleAvoidance():
             command_ard = self.convert_command(command_loc[0])
 
             for command in command_ard:
-                self.move(command)
+                if 'w' in command:
+                        self.travel_straight(command)
+
+                elif 'r' in command:
+                    self.turn(command)
 
             sensors_list = self.get_sensor_readings()
 
@@ -532,10 +540,16 @@ class ObstacleAvoidance():
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
-                    self.move(command)
-
                     # MAY MOVE THIS SOMEWHERE ELSE
                     self.parallel()
+                    if 'w' in command:
+                        self.travel_straight(command)
+
+                    elif 'r' in command:
+                        self.turn(command)
+
+                    # # MAY MOVE THIS SOMEWHERE ELSE
+                    # self.parallel()
                 
                 # give time for robot to travel in maze
                 time.sleep(2)
