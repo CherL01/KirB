@@ -419,6 +419,8 @@ class MazeLocalization():
         # elif self.localized == False:
         
         print('localized (SHOULD RETURN FALSE): ', self.localized)
+        print('(localize) sensor readings: ', sensor_readings)
+        
 
         # get probabilities for new potential square label and heading pairs
         new_square_heading_pairs_reordered, new_square_probs = self.prob_after_moving(self.last_movement, sensor_readings, self.square_heading_pairs)
