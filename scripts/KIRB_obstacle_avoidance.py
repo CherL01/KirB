@@ -118,10 +118,42 @@ class ObstacleAvoidance():
         '''
 
         # get direction of turn and degree
-        turn_deg = [*command].index('-')
+        turn_deg = int(command.split('-')[-1])
 
-        while turn_deg > 0:
-            self.move(' r0')
+        if '--' in command:
+            while turn_deg > 0:
+                self.move(' r0--4')
+                if self.sensor_label2reading_dict['u5']:
+                    self.move(' w0--1')
+                turn_deg -= 4
+
+        elif '-' in turn_deg:
+            while turn_deg > 0:
+                self.move(' r0--4')
+                if self.sensor_label2reading_dict['u5']:
+                    self.move(' w0--1')
+                turn_deg -= 4
+
+    def travel_straight(self, command):
+        '''
+        input: travel straight command
+        output: None
+
+        converts travelling straight command into smaller movements for smoother travelling
+        '''
+
+        # get direction of turn and degree
+        distance = int(command.split('-')[-1])
+
+        if '--' in command:
+            while distance > 0:
+                self.move(' w0--1')
+                distance -= 1
+
+        elif '-' in command:
+            while distance > 0:
+                self.move(' w0-1')
+                distance -= 1
 
 
     def localizable_square_detection(self):
@@ -136,10 +168,10 @@ class ObstacleAvoidance():
         back_sensor = self.sensor_label2reading_dict['u5']
         left_sensor = self.avg_sensor_reading('L')
         right_sensor = self.avg_sensor_reading('R')
-        print('front sensor: ', front_sensor)
-        print('back sensor: ', back_sensor)
-        print('left sensor: ', left_sensor)
-        print('right sensor: ', right_sensor)
+        # print('front sensor: ', front_sensor)
+        # print('back sensor: ', back_sensor)
+        # print('left sensor: ', left_sensor)
+        # print('right sensor: ', right_sensor)
 
         # if wall not detected in front, return False
         if not self.detect_wall(front_sensor):
@@ -195,7 +227,7 @@ class ObstacleAvoidance():
                 self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
 
             except ValueError:
-                break
+                self.get_sensor_readings()
 
         # print('sensor reading dict: ', self.sensor_label2reading_dict)
 
@@ -239,7 +271,7 @@ class ObstacleAvoidance():
         PA.write(command)
 
         # # may change the sleep time
-        # time.sleep(0.5)
+        time.sleep(3)
 
     def convert_command(self, command_loc):
         '''
@@ -280,6 +312,7 @@ class ObstacleAvoidance():
         # if self.running == False:
         #     return self.running
 
+        _ = self.get_sensor_readings()
         self.sensor_diff()
         
         closest_sensor, _ = self.get_closest()
@@ -432,27 +465,35 @@ class ObstacleAvoidance():
         print('sensor list 1: ', sensors_list)
 
         # run localization in initial square 
-        _, _, command_loc = ML.initial_localize(sensors_list)
-
-        if command_loc == ['RT']:
+        while True:
+            _, _, command_loc = ML.initial_localize(sensors_list)
 
             command_ard = self.convert_command(command_loc[0])
                 
             for command in command_ard:
-                self.move(command)
+                print('initial localize command: ', command)
+                if 'w' in command:
+                        self.travel_straight(command)
+
+                elif 'r' in command:
+                    self.turn(command)
 
             # get sensor readings in a list
             sensors_list = self.get_sensor_readings()
-            print('sensor list 2: ', sensors_list)
+            print('sensor list (initial localize): ', sensors_list)
+            
+            if command_loc != ['RT']:
+                break
 
             # run localization in initial square 
-            _, _, command_loc = ML.initial_localize(sensors_list)
+            # _, _, command_loc = ML.initial_localize(sensors_list)
             # command_ard = self.convert_command(command_loc[0])
                 
             # for command in command_ard:
             #     self.move(command)
 
-
+        # get sensor readings in a list
+        sensors_list = self.get_sensor_readings()
         # loops until localization is fully complete
         while True:
             localized, _, command_loc = ML.localize(sensors_list)
@@ -464,7 +505,11 @@ class ObstacleAvoidance():
             command_ard = self.convert_command(command_loc[0])
 
             for command in command_ard:
-                self.move(command)
+                if 'w' in command:
+                        self.travel_straight(command)
+
+                elif 'r' in command:
+                    self.turn(command)
 
             sensors_list = self.get_sensor_readings()
 
@@ -483,13 +528,17 @@ class ObstacleAvoidance():
                     self.parallel()
 
                     print('command (during navigation): ', command)
-                    self.move(command)
+                    if 'w' in command:
+                        self.travel_straight(command)
 
-                    # MAY MOVE THIS SOMEWHERE ELSE
-                    self.parallel()
+                    elif 'r' in command:
+                        self.turn(command)
+
+                    # # MAY MOVE THIS SOMEWHERE ELSE
+                    # self.parallel()
                 
-                    # give time for robot to travel in maze
-                    time.sleep(2)
+                # give time for robot to travel in maze
+                time.sleep(5)
 
                 # run localize again
                 sensors_list = self.get_sensor_readings()
@@ -509,10 +558,16 @@ class ObstacleAvoidance():
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
-                    self.move(command)
-
                     # MAY MOVE THIS SOMEWHERE ELSE
                     self.parallel()
+                    if 'w' in command:
+                        self.travel_straight(command)
+
+                    elif 'r' in command:
+                        self.turn(command)
+
+                    # # MAY MOVE THIS SOMEWHERE ELSE
+                    # self.parallel()
                 
                 # give time for robot to travel in maze
                 time.sleep(2)
@@ -525,7 +580,7 @@ drop_off_loc = 'A6'
 OA = ObstacleAvoidance()
 
 # navigates to a localizable square
-OA.initial_navigation()
+# OA.initial_navigation()
 
 # tries to localize then navigate to wherever
 OA.localize_and_navigate('loading zone')
