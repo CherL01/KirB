@@ -109,7 +109,20 @@ class ObstacleAvoidance():
         else:
             return True
 
-    # def turn()
+    def turn(self, command):
+        '''
+        input: turn command
+        output: None
+
+        converts turn command into smaller movements for smoother turning
+        '''
+
+        # get direction of turn and degree
+        turn_deg = [*command].index('-')
+
+        while turn_deg > 0:
+            self.move(' r0')
+
 
     def localizable_square_detection(self):
         '''
@@ -454,8 +467,14 @@ class ObstacleAvoidance():
                     # MAY MOVE THIS SOMEWHERE ELSE
                     self.parallel()
                 
-                # give time for robot to travel in maze
-                time.sleep(2)
+                    # give time for robot to travel in maze
+                    time.sleep(2)
+
+                # run localize again
+                sensors_list = self.get_sensor_readings()
+                localized, current_loc, command_loc = ML.localize(sensors_list)
+                if current_loc != square:
+                    self.localize_and_navigate('loading_zone')
 
             print('reached localization zone!')
 
