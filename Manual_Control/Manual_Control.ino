@@ -45,7 +45,7 @@ int Rotate2(float rotDegrees);          // bigger rotate
 int MoveForward(float movInches);
 int MoveForward2(float movInches);      // bigger movement
 float L_encValPerInch = 97.305;         // henry's experiment calculated this constant
-float R_encValPerInch = 99.037;         // henry's experiment calculated this constant
+float R_encValPerInch = 99;         // henry's trying something lol
 int GetAllSensorReadings(float numAvg);
 int numAvg = 2;       // total avg time
 
@@ -55,8 +55,8 @@ void RightMotorForward(void);
 void RightMotorBackward(void);
 
 //Define Variables
-int LmotorSpeed = 100;
-int RmotorSpeed = 100;
+int LmotorSpeed = 95;
+int RmotorSpeed = 105;
 String cmdStr;
 volatile long leftMotorCount = 0;
 volatile long rightMotorCount = 0;
@@ -414,7 +414,7 @@ void LeftMotorBackward(void) {
   // testing code
   digitalWrite(leftMotorIn3, LOW);
   digitalWrite(leftMotorIn4, HIGH);
-  analogWrite(leftMotorPin, LmotorSpeed);
+  analogWrite(leftMotorPin, LmotorSpeed-10);
   //delay(1000);
 }
 

@@ -27,7 +27,7 @@ class PyArduino:
         self.msg_delim = msg_delim
         # initialize serial connection with the arduino, 3 second timeout to make sure nothing breaks
         self.ser = serial.Serial(com_port, baud_rate, timeout=timeout)
-        time.sleep(3)
+        time.sleep(4)
         
 
     def write(self, msg):
@@ -43,11 +43,16 @@ class PyArduino:
             self.msg_buffer = self.msg_buffer + data
             if self.msg_delim in self.msg_buffer:
                 split_buf = self.msg_buffer.split(self.msg_delim)
-                msg_rec = split_buf.pop(0)
+                if len(split_buf) > 1:
+                    for _ in range(len(split_buf) - 1):
+                        msg_rec = split_buf.pop(0)
+                        self.msgs.append(msg_rec)
+                        self.all_msgs_rec.append(msg_rec)
+                else:
+                    msg_rec = split_buf.pop(0)
+                    self.msgs.append(msg_rec)
+                    self.all_msgs_rec.append(msg_rec)
                 self.msg_buffer = self.msg_delim.join(split_buf)
-
-                self.msgs.append(msg_rec)
-                self.all_msgs_rec.append(msg_rec)
 
         if self.msgs:
             if self.mode == "FIFO":

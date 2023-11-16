@@ -55,10 +55,10 @@ class MazeLocalization():
         self.wall_limit = 4
 
         # sensor noise
-        self.sensor_noise = 2
+        self.sensor_noise = 10
 
         # probability threshold (diff between highest and second highest prob for robot to be considered localized)
-        self.prob_threshold = 0.5
+        self.prob_threshold = 0.8
     
     def make_movement(self, current_loc, heading, mov_direction, turn = True):
         """ 
@@ -172,6 +172,8 @@ class MazeLocalization():
             # multiply number of squares by distance to get theoretical reading
             # added sensor tolerance for extra distance since measurement from sensor isnt directly on the edge of a square
             theoretical_values.append(num_loops * self.square_dim + self.sensor_tolerance)
+        print('square label/heading: ', square_label, heading)
+        print('theoretical value: ', theoretical_values)
 
         return theoretical_values
     
@@ -257,8 +259,11 @@ class MazeLocalization():
         # get new square heading pairs
         new_square_heading_pairs = []
         for square, heading in square_heading_pairs:
+            print('(before loop) new square/heading, movement: ', square, heading, movement)
             new_square, new_heading = self.make_movement(square, heading, movement, turn=True)
-            new_square_heading_pairs.append((new_square, new_heading))
+            if new_square is not None:
+                print('new square/heading: ', new_square, new_heading)
+                new_square_heading_pairs.append((new_square, new_heading))
 
         probs = []
         # calculate gaussian probability for each new square
@@ -397,7 +402,16 @@ class MazeLocalization():
         square_heading_pairs_reordered, square_probs = self.square_prob(sensor_readings, square_heading_pairs)
         print('square heading pairs reordered: ', square_heading_pairs_reordered)
         print('square probs: ', square_probs)
+        
         self.square_heading_pairs = square_heading_pairs_reordered
+
+        if (square_probs[0] - square_probs[1]) > self.prob_threshold:
+            # set localized as true to continue to navigation
+            self.localized = True
+            self.current_location = self.square_heading_pairs[0]
+            print('current location: ', self.current_location)
+        
+            return self.localized, self.current_location, ['']
 
         # set initial as False because will move from initial square
         self.initial = False

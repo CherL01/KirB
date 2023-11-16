@@ -2,5 +2,6 @@
     "port": "COM6",
     "configuration": "cpu=atmega2560",
     "board": "arduino:avr:mega",
-    "programmer": "arduino:arduinoasisp"
+    "programmer": "arduino:arduinoasisp",
+    "sketch": "Manual_Control\\Manual_Control.ino"
 }
