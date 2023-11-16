@@ -594,6 +594,18 @@ class ObstacleAvoidance():
 
         # run localization in initial square 
         while True:
+
+            # if in D1:
+            if (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 30):
+                print('changed back sensor value')
+                sensors_list[2] = 60
+                print('changed sensor list: ', sensors_list)
+
+            elif (sensors_list[1] < ML.wall_limit) and (sensors_list[2] > 30):
+                print('changed right sensor')
+                sensors_list[3] = 60
+                print('changed sensor list: ', sensors_list)
+
             _, _, command_loc = ML.initial_localize(sensors_list)
             
             if command_loc == ['']:
