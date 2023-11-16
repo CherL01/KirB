@@ -222,21 +222,20 @@ class ObstacleAvoidance():
         '''
 
         # split sensor readings and store in init variables
-        for _ in range(3):
-            print('in loop')
+        # for _ in range(3):
             
-            # get message from buffer
-            message = PA.blocking_read()
+        # get message from buffer
+        message = PA.blocking_read()
 
-            print('message: ', message)
-            
-            try:
-                for sensor in message.split('|')[:6]:
-                    label, reading = sensor.split('=')
-                    self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
+        # print('message: ', message)
+        
+        try:
+            for sensor in message.split('|')[:6]:
+                label, reading = sensor.split('=')
+                self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
 
-            except ValueError:
-                self.get_sensor_readings()
+        except ValueError:
+            self.get_sensor_readings()
 
         print('sensor reading dict: ', self.sensor_label2reading_dict)
 
@@ -308,7 +307,7 @@ class ObstacleAvoidance():
         # find difference between right sensors
         self.right_sensor_difference = abs(self.sensor_label2reading_dict['u3'] - self.sensor_label2reading_dict['u4'])
 
-    def parallel(self, direction='F'):
+    def parallel(self, initial=False):
         '''
         input: self
         return: False if emergency stop activated, True otherwise
@@ -375,19 +374,28 @@ class ObstacleAvoidance():
                 print('back right closest: r0-6')
                 self.move(' r0-6')
 
-        # IF FORWARD: if there is room in front, travel forward one inch
-        if direction == 'F':
+        if initial is True:
+            # if there is room in front, travel forward one inch
             if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                self.move(' w0-0')  #lol
+                self.move(' w0-4')  
             else:
-                self.move(' w0--1')
+                self.move(' w0--2')
                 
-        # IF BACKWARD: if there is room in front, travel forward one inch
-        elif direction == 'B':
-            if self.sensor_label2reading_dict['u5'] >= self.forward_limit:
-                self.move(' w0--0') #lol
-            else:
-                self.move(' w0-1')
+
+
+        # # IF FORWARD: if there is room in front, travel forward one inch
+        # if direction == 'F':
+        #     if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+        #         self.move(' w0-0')  #lol
+        #     else:
+        #         self.move(' w0--1')
+                
+        # # IF BACKWARD: if there is room in front, travel forward one inch
+        # elif direction == 'B':
+        #     if self.sensor_label2reading_dict['u5'] >= self.forward_limit:
+        #         self.move(' w0--0') #lol
+        #     else:
+        #         self.move(' w0-1')
 
             # # if no room in front, back up two inches
             # else:
@@ -465,7 +473,7 @@ class ObstacleAvoidance():
         # travels through the maze purely on obstale avoidance until robot is in a localizable square
         while self.localizable_square_detection() == False:
             print('attempt to run parallel')
-            self.parallel()
+            self.parallel(initial=True)
 
         print('localizable square found!')
         
@@ -572,17 +580,20 @@ class ObstacleAvoidance():
 
         # navigate to drop off zone
         elif zone == 'drop off zone':
+
             path, movements = ML.doz_navigation(location)
+            print('drop off zone path: ', path)
 
             # get square, heading, and navigation command
             for square, (command_nav, heading) in zip(path[1:], movements):
-                print(square, heading)
+                print('next square and heading: ', square, heading)
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
                     # # MAY MOVE THIS SOMEWHERE ELSE
                     # self.parallel()
-                    
+
+                    print('command (during navigation): ', command)
                     if 'w' in command:
                         self.travel_straight(command)
 
@@ -593,7 +604,7 @@ class ObstacleAvoidance():
                     # self.parallel()
                 
                 # give time for robot to travel in maze
-                time.sleep(2)
+                time.sleep(5)
 
             print('reached drop off zone!')
 
