@@ -77,7 +77,7 @@ class ObstacleAvoidance():
         self.left_sensor_difference = 0
         self.right_sensor_difference = 0
         self.sensor_difference_limit = 0.15
-        self.e_stop_limit = 1.5
+        self.e_stop_limit = 1.18
         self.square_dim = 12
         self.forward_limit = 2.8
         
@@ -229,8 +229,8 @@ class ObstacleAvoidance():
         '''
 
         # split sensor readings and store in init variables
-        time.sleep(1.5)
-        for _ in range(4):
+        # time.sleep(1.5)
+        for _ in range(5):
             
             # get message from buffer
             message = PA.blocking_read()
@@ -303,18 +303,18 @@ class ObstacleAvoidance():
         sensor_list = self.get_sensor_readings()
         
         # no wall in front
-        if sensor_list[0] > (ML.wall_limit + ML.sensor_noise):
+        if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
             # if one tile ahead
             if sensor_list[0] < 24:
-                front_turn_limit = 15.0
+                front_turn_limit = 14.5
             # if two tiles ahead
             elif sensor_list[0] < 36:
-                front_turn_limit = 27.0
+                front_turn_limit = 26.5
             # if three tiles ahead
             elif sensor_list[0] < 48:
-                front_turn_limit = 39.0
+                front_turn_limit = 38.5
         
-        while sensor_list[0] < front_turn_limit or sensor_list[2] < (ML.wall_limit + ML.sensor_tolerance):
+        while sensor_list[0] < front_turn_limit or sensor_list[2] < self.e_stop_limit:
             print('\nnot enough clearance\n')
             
             print('front back turn limit: ', front_turn_limit)
@@ -324,23 +324,23 @@ class ObstacleAvoidance():
             if sensor_list[0] < front_turn_limit:
                 self.move(" w0--1")
                 self.parallel()
-            elif sensor_list[2] < ML.wall_limit:
-                self.move(" w0-1")
+            elif sensor_list[2] < self.e_stop_limit:
+                self.move(" w0-0.75")
                 self.parallel()
                 
             sensor_list = self.get_sensor_readings()
                     
             # no wall in front
-            if sensor_list[0] > ML.wall_limit:
+            if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
                 # if one tile ahead
                 if sensor_list[0] < 24:
-                    front_turn_limit = 15.0
+                    front_turn_limit = 14.5
                 # if two tiles ahead
                 elif sensor_list[0] < 36:
-                    front_turn_limit = 27.0
+                    front_turn_limit = 26.5
                 # if three tiles ahead
                 elif sensor_list[0] < 48:
-                    front_turn_limit = 39.0
+                    front_turn_limit = 38.5
             else:
                 front_turn_limit = 2.0
 
@@ -350,7 +350,7 @@ class ObstacleAvoidance():
             if sensor_list[1] < sides_turn_limit:
                 self.move(' r0--15')
                 self.move(' w0--1')
-                self.move(' r0-12')
+                self.move(' r0-15')
                 self.move(' w0-0.5')
                 # self.parallel()
             elif sensor_list[3] < sides_turn_limit:
@@ -363,21 +363,21 @@ class ObstacleAvoidance():
             sensor_list = self.get_sensor_readings()
                     
             # no wall in front
-            if sensor_list[0] > ML.wall_limit:
+            if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
                 # if one tile ahead
                 if sensor_list[0] < 24:
-                    front_turn_limit = 15.0
+                    front_turn_limit = 14.5
                 # if two tiles ahead
                 elif sensor_list[0] < 36:
-                    front_turn_limit = 27.0
+                    front_turn_limit = 26.5
                 # if three tiles ahead
                 elif sensor_list[0] < 48:
-                    front_turn_limit = 39.0
+                    front_turn_limit = 38.5
             else:
                 front_turn_limit = 2.0
                     
         cleared = True     
-        print('cleared: ', cleared)       
+        print('cleared: ', cleared)
         
         return cleared
 
@@ -473,11 +473,14 @@ class ObstacleAvoidance():
             elif closest_sensor == 'u4':
                 print('back right closest: r0-6')
                 self.move(' r0-6')
+                
+        if (self.avg_sensor_reading('L') < self.e_stop_limit) or (self.avg_sensor_reading('R') < self.e_stop_limit):
+            self.check_turn_clearance()
 
         if initial is True:
             # if there is room in front, travel forward one inch
             if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                self.move(' w0-4')  
+                self.move(' w0-3')  
             else:
                 self.move(' w0--2')
                 
@@ -705,10 +708,10 @@ drop_off_loc = 'A6'
 OA = ObstacleAvoidance()
 
 # # navigates to a localizable square
-# OA.initial_navigation()
+OA.initial_navigation()
 
 # # tries to localize then travel to loading zone
-# OA.localize_and_navigate('loading zone')
+OA.localize_and_navigate('loading zone')
 
 # navigates to a localizable square
 OA.initial_navigation()
