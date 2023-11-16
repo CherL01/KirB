@@ -58,7 +58,7 @@ class MazeLocalization():
         self.sensor_noise = 10
 
         # probability threshold (diff between highest and second highest prob for robot to be considered localized)
-        self.prob_threshold = 0.8
+        self.prob_threshold = 0.6
     
     def make_movement(self, current_loc, heading, mov_direction, turn = True):
         """ 
@@ -172,8 +172,8 @@ class MazeLocalization():
             # multiply number of squares by distance to get theoretical reading
             # added sensor tolerance for extra distance since measurement from sensor isnt directly on the edge of a square
             theoretical_values.append(num_loops * self.square_dim + self.sensor_tolerance)
-        print('square label/heading: ', square_label, heading)
-        print('theoretical value: ', theoretical_values)
+        # print('square label/heading: ', square_label, heading)
+        # print('theoretical value: ', theoretical_values)
 
         return theoretical_values
     
@@ -259,10 +259,10 @@ class MazeLocalization():
         # get new square heading pairs
         new_square_heading_pairs = []
         for square, heading in square_heading_pairs:
-            print('(before loop) new square/heading, movement: ', square, heading, movement)
+            # print('(before loop) new square/heading, movement: ', square, heading, movement)
             new_square, new_heading = self.make_movement(square, heading, movement, turn=True)
             if new_square is not None:
-                print('new square/heading: ', new_square, new_heading)
+                # print('new square/heading: ', new_square, new_heading)
                 new_square_heading_pairs.append((new_square, new_heading))
 
         probs = []
@@ -391,7 +391,7 @@ class MazeLocalization():
 
         # get square labels, headings, if rotation is required
         square_heading_pairs, rotation = self.potential_square_heading_pairs(sensor_readings)
-        print('square heading pairs: ', square_heading_pairs)
+        # print('square heading pairs: ', square_heading_pairs)
 
         # if rotation is required, return rotation command to main script
         if rotation == True:
@@ -432,7 +432,7 @@ class MazeLocalization():
         # # if robot is not localized
         # elif self.localized == False:
         
-        print('localized (SHOULD RETURN FALSE): ', self.localized)
+        # print('localized (SHOULD RETURN FALSE): ', self.localized)
         print('(localize) sensor readings: ', sensor_readings)
         
 
@@ -474,7 +474,7 @@ class MazeLocalization():
 
         # once path for loading zone is obtained, set loading zone to True, reset initial and localized variables
         self.loading_zone = True
-        self.initial = False
+        self.initial = True
         self.localized = False
 
         return loading_zone_path, path_commands

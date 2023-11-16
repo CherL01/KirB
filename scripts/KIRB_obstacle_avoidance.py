@@ -64,12 +64,14 @@ class ObstacleAvoidance():
             self.sensor_label2reading_dict[l] = s
 
         # initialize movement command dict
-        self.mov_dict = {'LT': [' r0--90'],
-                        'RT': [' r0-90'],
+        self.left_turn_angle = 95
+        self.right_turn_angle = 90
+        self.mov_dict = {'LT': [f' r0--{self.left_turn_angle}'],
+                        'RT': [f' r0-{self.right_turn_angle}'],
                         'F': [' w0-12'],
                         'B': [' w0--12'],
-                        'L': [' r0--90', ' w0-12'],
-                        'R': [' r0-90', ' w0-12'],}
+                        'L': [f' r0--{self.left_turn_angle}', ' w0-12'],
+                        'R': [f' r0-{self.right_turn_angle}', ' w0-12'],}
 
         #initialize sensor difference and limit and preset values
         self.left_sensor_difference = 0
@@ -136,30 +138,30 @@ class ObstacleAvoidance():
                 #     self.move(' w0--1')
                 turn_deg -= 90
 
-    def travel_straight(self, command):
-        '''
-        input: travel straight command
-        output: None
+    # def travel_straight(self, command):
+    #     '''
+    #     input: travel straight command
+    #     output: None
 
-        converts travelling straight command into smaller movements for smoother travelling
-        '''
+    #     converts travelling straight command into smaller movements for smoother travelling
+    #     '''
 
-        # get direction of turn and degree
-        distance = int(command.split('-')[-1])
+    #     # get direction of turn and degree
+    #     distance = int(command.split('-')[-1])
 
-        # if backwards
-        if '--' in command:
-            while distance > 0:
-                self.move(' w0--12')
-                self.parallel(direction='B')
-                distance -= 12
+    #     # if backwards
+    #     if '--' in command:
+    #         while distance > 0:
+    #             self.move(' w0--12')
+    #             self.parallel(direction='B')
+    #             distance -= 12
 
-        # if forwards
-        elif '-' in command:
-            while distance > 0:
-                self.parallel()
-                self.move(' w0-12')
-                distance -= 12
+    #     # if forwards
+    #     elif '-' in command:
+    #         while distance > 0:
+    #             self.parallel()
+    #             self.move(' w0-12')
+    #             distance -= 12
 
 
     def localizable_square_detection(self):
@@ -172,8 +174,8 @@ class ObstacleAvoidance():
         self.get_sensor_readings()
         front_sensor = self.sensor_label2reading_dict['u0']
         back_sensor = self.sensor_label2reading_dict['u5']
-        left_sensor = self.avg_sensor_reading('L')
-        right_sensor = self.avg_sensor_reading('R')
+        # left_sensor = self.avg_sensor_reading('L')
+        # right_sensor = self.avg_sensor_reading('R')
         # print('front sensor: ', front_sensor)
         # print('back sensor: ', back_sensor)
         # print('left sensor: ', left_sensor)
@@ -194,7 +196,7 @@ class ObstacleAvoidance():
             else:
                 return True
     
-    def avg_sensor_reading(self, side): ### REVISE
+    def avg_sensor_reading(self, side): 
         '''
         input: side of interest (L or R)
         output: average sensor reading
@@ -203,10 +205,15 @@ class ObstacleAvoidance():
         if side == 'L':
             s1 = self.sensor_label2reading_dict['u1']
             s2 = self.sensor_label2reading_dict['u2']
+            if abs(s1 - s2) > ML.wall_limit:
+                return max(s1, s2)
 
         else:
             s1 = self.sensor_label2reading_dict['u3']
             s2 = self.sensor_label2reading_dict['u4']
+            if abs(s1 - s2) > ML.wall_limit:
+                return max(s1, s2)
+
         
         average = (s1 + s2) / 2
             
@@ -222,20 +229,21 @@ class ObstacleAvoidance():
         '''
 
         # split sensor readings and store in init variables
-        # for _ in range(3):
+        time.sleep(1.5)
+        for _ in range(4):
             
-        # get message from buffer
-        message = PA.blocking_read()
+            # get message from buffer
+            message = PA.blocking_read()
 
-        # print('message: ', message)
-        
-        try:
-            for sensor in message.split('|')[:6]:
-                label, reading = sensor.split('=')
-                self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
+            # print('message: ', message)
+            
+            try:
+                for sensor in message.split('|')[:6]:
+                    label, reading = sensor.split('=')
+                    self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
 
-        except ValueError:
-            self.get_sensor_readings()
+            except ValueError:
+                self.get_sensor_readings()
 
         print('sensor reading dict: ', self.sensor_label2reading_dict)
 
@@ -275,11 +283,103 @@ class ObstacleAvoidance():
         input: command
         output: None
         '''
-        
+        if 'r' in command and (str(self.left_turn_angle) in command or str(self.right_turn_angle) in command):
+            self.check_turn_clearance()
+
         PA.write(command)
 
         # # may change the sleep time
         time.sleep(3)
+
+    def check_turn_clearance(self):
+        '''
+        input: self
+        output: True if there is clearance
+        '''
+        cleared = False
+        front_turn_limit = 2.0
+        sides_turn_limit = 2.76
+        
+        sensor_list = self.get_sensor_readings()
+        
+        # no wall in front
+        if sensor_list[0] > (ML.wall_limit + ML.sensor_noise):
+            # if one tile ahead
+            if sensor_list[0] < 24:
+                front_turn_limit = 15.0
+            # if two tiles ahead
+            elif sensor_list[0] < 36:
+                front_turn_limit = 27.0
+            # if three tiles ahead
+            elif sensor_list[0] < 48:
+                front_turn_limit = 39.0
+        
+        while sensor_list[0] < front_turn_limit or sensor_list[2] < (ML.wall_limit + ML.sensor_tolerance):
+            print('\nnot enough clearance\n')
+            
+            print('front back turn limit: ', front_turn_limit)
+            print('sensor list: ', sensor_list)
+            
+            # if the front is too close, move back. if the back is too close, move up
+            if sensor_list[0] < front_turn_limit:
+                self.move(" w0--1")
+                self.parallel()
+            elif sensor_list[2] < ML.wall_limit:
+                self.move(" w0-1")
+                self.parallel()
+                
+            sensor_list = self.get_sensor_readings()
+                    
+            # no wall in front
+            if sensor_list[0] > ML.wall_limit:
+                # if one tile ahead
+                if sensor_list[0] < 24:
+                    front_turn_limit = 15.0
+                # if two tiles ahead
+                elif sensor_list[0] < 36:
+                    front_turn_limit = 27.0
+                # if three tiles ahead
+                elif sensor_list[0] < 48:
+                    front_turn_limit = 39.0
+            else:
+                front_turn_limit = 2.0
+
+        while sensor_list[1] < sides_turn_limit or sensor_list[3] < sides_turn_limit:
+            print('\nnot enough side clearance\n')
+            # if the sides are too close, adjust                
+            if sensor_list[1] < sides_turn_limit:
+                self.move(' r0--15')
+                self.move(' w0--1')
+                self.move(' r0-12')
+                self.move(' w0-0.5')
+                # self.parallel()
+            elif sensor_list[3] < sides_turn_limit:
+                self.move(' r0-15')
+                self.move(' w0--1')
+                self.move(' r0--12')
+                self.move(' w0-0.5')
+                # self.parallel()
+            
+            sensor_list = self.get_sensor_readings()
+                    
+            # no wall in front
+            if sensor_list[0] > ML.wall_limit:
+                # if one tile ahead
+                if sensor_list[0] < 24:
+                    front_turn_limit = 15.0
+                # if two tiles ahead
+                elif sensor_list[0] < 36:
+                    front_turn_limit = 27.0
+                # if three tiles ahead
+                elif sensor_list[0] < 48:
+                    front_turn_limit = 39.0
+            else:
+                front_turn_limit = 2.0
+                    
+        cleared = True     
+        print('cleared: ', cleared)       
+        
+        return cleared
 
     def convert_command(self, command_loc):
         '''
@@ -312,7 +412,7 @@ class ObstacleAvoidance():
         input: self
         return: False if emergency stop activated, True otherwise
         '''
-
+        print('running parallel!')
         print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
 
         # # check if emergency stop needed
@@ -471,7 +571,7 @@ class ObstacleAvoidance():
         # self.move( 'ua')
 
         # travels through the maze purely on obstale avoidance until robot is in a localizable square
-        while self.localizable_square_detection() == False:
+        while self.localizable_square_detection() is False:
             print('attempt to run parallel')
             self.parallel(initial=True)
 
@@ -502,16 +602,15 @@ class ObstacleAvoidance():
             for command in command_ard:
                 print('initial localize command: ', command)
                 self.move(command)
+                self.parallel()
+                
+            # get sensor readings in a list
+            sensors_list = self.get_sensor_readings()
+            print('sensor list (initial localize): ', sensors_list)
                 
             if command_loc != ['RT']:
                 print('initial localization done!')
                 break
-
-            # get sensor readings in a list
-            sensors_list = self.get_sensor_readings()
-            print('sensor list (initial localize): ', sensors_list)
-            
-            
 
             # run localization in initial square 
             # _, _, command_loc = ML.initial_localize(sensors_list)
@@ -520,9 +619,9 @@ class ObstacleAvoidance():
             # for command in command_ard:
             #     self.move(command)
 
-        # get sensor readings in a list
-        sensors_list = self.get_sensor_readings()
-        print('sensor list: ', sensors_list)
+        # # get sensor readings in a list
+        # sensors_list = self.get_sensor_readings()
+        # print('sensor list: ', sensors_list)
         
         # loops until localization is fully complete
         while ML.localized is False:
@@ -535,11 +634,8 @@ class ObstacleAvoidance():
             command_ard = self.convert_command(command_loc[0])
 
             for command in command_ard:
-                if 'w' in command:
-                    self.move(command)
-
-                elif 'r' in command:
-                    self.move(command)
+                self.move(command)
+                self.parallel()
 
             sensors_list = self.get_sensor_readings()
 
@@ -558,17 +654,13 @@ class ObstacleAvoidance():
                     # self.parallel()
 
                     print('command (during navigation): ', command)
-                    if 'w' in command:
-                        self.travel_straight(command)
-
-                    elif 'r' in command:
-                        self.turn(command)
+                    self.move(command)
 
                     # # MAY MOVE THIS SOMEWHERE ELSE
-                    # self.parallel()
+                    self.parallel()
                 
-                # give time for robot to travel in maze
-                time.sleep(5)
+                # # give time for robot to travel in maze
+                # time.sleep(3)
 
                 # # run localize again
                 # sensors_list = self.get_sensor_readings()
@@ -577,6 +669,7 @@ class ObstacleAvoidance():
                 #     self.localize_and_navigate('loading_zone')
 
             print('reached localization zone!')
+            self.move(' s1')
 
         # navigate to drop off zone
         elif zone == 'drop off zone':
@@ -594,28 +687,31 @@ class ObstacleAvoidance():
                     # self.parallel()
 
                     print('command (during navigation): ', command)
-                    if 'w' in command:
-                        self.travel_straight(command)
-
-                    elif 'r' in command:
-                        self.turn(command)
+                    self.move(command)
 
                     # # MAY MOVE THIS SOMEWHERE ELSE
-                    # self.parallel()
+                    self.parallel()
                 
-                # give time for robot to travel in maze
-                time.sleep(5)
+                # # give time for robot to travel in maze
+                # time.sleep(3)
 
             print('reached drop off zone!')
+            self.move(' s2')
+            self.move(' s3')
 
 
 drop_off_loc = 'A6'
 
 OA = ObstacleAvoidance()
 
+# # navigates to a localizable square
+# OA.initial_navigation()
+
+# # tries to localize then travel to loading zone
+# OA.localize_and_navigate('loading zone')
+
 # navigates to a localizable square
 OA.initial_navigation()
 
-# tries to localize then navigate to wherever
-OA.localize_and_navigate('loading zone')
-# OA.localize_and_navigate('drop off zone', drop_off_loc)
+# tries to localize then travel to drop off zone
+OA.localize_and_navigate('drop off zone', drop_off_loc)

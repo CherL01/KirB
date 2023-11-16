@@ -56,7 +56,7 @@ void RightMotorBackward(void);
 
 //Define Variables
 int LmotorSpeed = 95;
-int RmotorSpeed = 105;
+int RmotorSpeed = 110;
 String cmdStr;
 volatile long leftMotorCount = 0;
 volatile long rightMotorCount = 0;
@@ -87,7 +87,7 @@ void setup() {
   //Serial.println("Enter AT commands:");
   // HC-05 default speed in AT command mode 
   BTSerial.begin(38400); 
-  delay(1000);
+  delay(100);
 }
 
 void loop() {
@@ -239,7 +239,7 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
   float tempVal = 0.0;
 
   for (int i=0; i< numAvg; i++) {
-    delay(100);
+    delay(80);
     float echoCM = 0;
     if (sensorNum == 1) {
       echoCM = sonar1.ping_cm();
@@ -414,7 +414,7 @@ void LeftMotorBackward(void) {
   // testing code
   digitalWrite(leftMotorIn3, LOW);
   digitalWrite(leftMotorIn4, HIGH);
-  analogWrite(leftMotorPin, LmotorSpeed-10);
+  analogWrite(leftMotorPin, LmotorSpeed-5);
   //delay(1000);
 }
 
