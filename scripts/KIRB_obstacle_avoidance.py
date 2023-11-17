@@ -230,7 +230,7 @@ class ObstacleAvoidance():
 
         # split sensor readings and store in init variables
         # time.sleep(1.5)
-        for _ in range(5):
+        for _ in range(3):
             
             # get message from buffer
             message = PA.blocking_read()
@@ -245,7 +245,7 @@ class ObstacleAvoidance():
             except ValueError:
                 self.get_sensor_readings()
 
-        print('sensor reading dict: ', self.sensor_label2reading_dict)
+        print('\nsensor reading dict: ', self.sensor_label2reading_dict)
 
         # organize sensor readings in F, L, B, R order
         f = self.sensor_label2reading_dict['u0']
@@ -315,7 +315,7 @@ class ObstacleAvoidance():
                 front_turn_limit = 38.5
         
         while sensor_list[0] < front_turn_limit or sensor_list[2] < self.e_stop_limit:
-            print('\nnot enough clearance\n')
+            print('\nnot enough clearance')
             
             print('front back turn limit: ', front_turn_limit)
             print('sensor list: ', sensor_list)
@@ -345,19 +345,19 @@ class ObstacleAvoidance():
                 front_turn_limit = 2.0
 
         while sensor_list[1] < sides_turn_limit or sensor_list[3] < sides_turn_limit:
-            print('\nnot enough side clearance\n')
+            print('not enough side clearance')
             # if the sides are too close, adjust                
             if sensor_list[1] < sides_turn_limit:
                 self.move(' r0--15')
                 self.move(' w0--1')
                 self.move(' r0-15')
-                self.move(' w0-0.5')
+                self.move(' w0-1')
                 # self.parallel()
             elif sensor_list[3] < sides_turn_limit:
                 self.move(' r0-15')
                 self.move(' w0--1')
                 self.move(' r0--12')
-                self.move(' w0-0.5')
+                self.move(' w0-1')
                 # self.parallel()
             
             sensor_list = self.get_sensor_readings()
@@ -412,7 +412,7 @@ class ObstacleAvoidance():
         input: self
         return: False if emergency stop activated, True otherwise
         '''
-        print('running parallel!')
+        print('\nrunning parallel!')
         # print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
 
         # # check if emergency stop needed
@@ -436,13 +436,16 @@ class ObstacleAvoidance():
         r_sense = (self.sensor_label2reading_dict['u3']+self.sensor_label2reading_dict['u4'])/2
         #case when KIRB is in hallway
         if (l_sense + r_sense) < 10:
+            print('in a hallway!')
             
             #when left is more open
             if l_sense > r_sense + 2:
+                print('moving to left of hallway')
                 self.move(' r0--6')
             
             #when right is more open
             if r_sense > l_sense + 2:
+                print('moving to right of hallway')
                 self.move(' r0-6')
                 
         #############
@@ -456,31 +459,33 @@ class ObstacleAvoidance():
             # TURN 4 DEG WHEN NOT ALIGNED
             # front left is closest
             if closest_sensor == 'u1':
-                print('front left closest: r0-6')
+                print('front left closest: moving right')
                 self.move(' r0-6')
         
             # back left is closest
             elif closest_sensor == 'u2':
-                print('back left closest: r0--6')
+                print('back left closest: moving left')
                 self.move(' r0--6')
 
             # front right is closest
             elif closest_sensor == 'u3':
-                print('front right closest: r0--6')
+                print('front right closest: moving left')
                 self.move(' r0--6')
 
             # back right is closest
             elif closest_sensor == 'u4':
-                print('back right closest: r0-6')
+                print('back right closest: moving right')
                 self.move(' r0-6')
                 
         if (self.avg_sensor_reading('L') < self.e_stop_limit) or (self.avg_sensor_reading('R') < self.e_stop_limit):
+            print('OOPS too close to a wall :(')
             self.check_turn_clearance()
 
         if initial is True:
+            print('WHERE AM I? I HAVE TO FIND MYSELF! "Just keep swimming :)"')
             # if there is room in front, travel forward one inch
             if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-                self.move(' w0-3')  
+                self.move(' w0-4')  
             else:
                 self.move(' w0--2')
                 
@@ -575,7 +580,7 @@ class ObstacleAvoidance():
 
         # travels through the maze purely on obstale avoidance until robot is in a localizable square
         while self.localizable_square_detection() is False:
-            print('attempt to run parallel')
+            print('\nattempt to run parallel')
             self.parallel(initial=True)
 
         print('localizable square found!')
@@ -590,7 +595,7 @@ class ObstacleAvoidance():
 
         # get sensor readings in a list
         sensors_list = self.get_sensor_readings()
-        print('sensor list 1: ', sensors_list)
+        print('\nsensor list (localize and navigate): ', sensors_list)
 
         # run localization in initial square 
         while ML.initial is True:
@@ -686,6 +691,7 @@ class ObstacleAvoidance():
 
             print('reached localization zone!')
             self.move(' s1')
+            print('loading zone - current location: ', ML.current_location)
 
         # navigate to drop off zone
         elif zone == 'drop off zone':
@@ -716,19 +722,18 @@ class ObstacleAvoidance():
             self.move(' s3')
 
 
-drop_off_loc = 'D8'
+drop_off_loc = 'A6'
 
 OA = ObstacleAvoidance()
 
-# # # navigates to a localizable square
-# OA.initial_navigation()
+# # navigates to a localizable square
+OA.initial_navigation()
 
-# # # tries to localize then travel to loading zone
-# OA.localize_and_navigate('loading zone')
+# # tries to localize then travel to loading zone
+OA.localize_and_navigate('loading zone')
 
 # # navigates to a localizable square
 # OA.initial_navigation()
 
-# ML.current_location = ('A1', 'N')
 # tries to localize then travel to drop off zone
 OA.localize_and_navigate('drop off zone', drop_off_loc)

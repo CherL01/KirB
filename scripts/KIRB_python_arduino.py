@@ -27,7 +27,7 @@ class PyArduino:
         self.msg_delim = msg_delim
         # initialize serial connection with the arduino, 3 second timeout to make sure nothing breaks
         self.ser = serial.Serial(com_port, baud_rate, timeout=timeout)
-        time.sleep(4)
+        time.sleep(6)
         
 
     def write(self, msg):

@@ -395,7 +395,7 @@ class MazeLocalization():
 
         # if rotation is required, return rotation command to main script
         if rotation == True:
-            print('localized (KIRB_localization): ', self.localized)
+            print('\nlocalized (KIRB_localization): ', self.localized)
             return self.localized, square_heading_pairs, ['RT'] # RT = right turn, can change right turn command later to fit generalized command
 
         # get probabilities for all potential square label and heading pairs
@@ -433,7 +433,7 @@ class MazeLocalization():
         # elif self.localized == False:
         
         # print('localized (SHOULD RETURN FALSE): ', self.localized)
-        print('(localize) sensor readings: ', sensor_readings)
+        print('\n(localize) sensor readings: ', sensor_readings)
         
 
         # get probabilities for new potential square label and heading pairs
@@ -474,8 +474,9 @@ class MazeLocalization():
 
         # once path for loading zone is obtained, set loading zone to True, reset initial and localized variables
         self.loading_zone = True
-        # self.initial = True
-        # self.localized = False
+        self.initial = False # True
+        self.localized = True # False
+        self.current_location = (loading_zone_path[-1], path_commands[-1][-1])
 
         return loading_zone_path, path_commands
 

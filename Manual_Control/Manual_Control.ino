@@ -86,7 +86,9 @@ void setup() {
   Serial.begin(9600);
   //Serial.println("Enter AT commands:");
   // HC-05 default speed in AT command mode 
-  BTSerial.begin(38400); 
+  BTSerial.begin(9600); 
+  Serial.setTimeout(50);
+  BTSerial.setTimeout(50);
   delay(100);
 }
 
@@ -409,7 +411,7 @@ void LeftMotorBackward(void) {
   // testing code
   digitalWrite(leftMotorIn3, LOW);
   digitalWrite(leftMotorIn4, HIGH);
-  analogWrite(leftMotorPin, LmotorSpeed-3);
+  analogWrite(leftMotorPin, LmotorSpeed-8);
   //delay(1000);
 }
 
@@ -417,7 +419,7 @@ void RightMotorForward(void) {
   // testing code
   digitalWrite(rightMotorIn1, HIGH);
   digitalWrite(rightMotorIn2, LOW);
-  analogWrite(rightMotorPin, RmotorSpeed);
+  analogWrite(rightMotorPin, RmotorSpeed-6);
   //delay(1000);
 }
 
