@@ -413,7 +413,7 @@ class ObstacleAvoidance():
         return: False if emergency stop activated, True otherwise
         '''
         print('running parallel!')
-        print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
+        # print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
 
         # # check if emergency stop needed
         # self.emergency_stop()
@@ -596,13 +596,14 @@ class ObstacleAvoidance():
         while True:
 
             # if in D1:
-            if (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 30):
-                print('changed back sensor value')
+            if (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 30) and (sensors_list[3] < 42):
+                print('in D1, changed back sensor value')
                 sensors_list[2] = 60
                 print('changed sensor list: ', sensors_list)
 
-            elif (sensors_list[1] < ML.wall_limit) and (sensors_list[2] > 30):
-                print('changed right sensor')
+            # if in D6:
+            elif (sensors_list[1] < ML.wall_limit) and (sensors_list[2] > 26) and (sensors_list[3] > 30):
+                print('in D6, changed right sensor')
                 sensors_list[3] = 60
                 print('changed sensor list: ', sensors_list)
 
@@ -715,18 +716,19 @@ class ObstacleAvoidance():
             self.move(' s3')
 
 
-drop_off_loc = 'A6'
+drop_off_loc = 'D8'
 
 OA = ObstacleAvoidance()
 
+# # # navigates to a localizable square
+# OA.initial_navigation()
+
+# # # tries to localize then travel to loading zone
+# OA.localize_and_navigate('loading zone')
+
 # # navigates to a localizable square
-OA.initial_navigation()
+# OA.initial_navigation()
 
-# # tries to localize then travel to loading zone
-OA.localize_and_navigate('loading zone')
-
-# navigates to a localizable square
-OA.initial_navigation()
-
+# ML.current_location = ('A1', 'N')
 # tries to localize then travel to drop off zone
 OA.localize_and_navigate('drop off zone', drop_off_loc)
