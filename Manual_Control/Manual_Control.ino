@@ -1,9 +1,8 @@
-#include  <Wire.h>
-#include <SoftwareSerial.h>
+#include <Wire.h>
 #include <NewPing.h>
 
 //Define pins
-SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
+//SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
 
 //Define ultrasonic sensors
 #define TRIGGER_PIN1          48    // Front
@@ -86,9 +85,9 @@ void setup() {
   Serial.begin(9600);
   //Serial.println("Enter AT commands:");
   // HC-05 default speed in AT command mode 
-  BTSerial.begin(9600); 
+//  BTSerial.begin(9600); 
   Serial.setTimeout(50);
-  BTSerial.setTimeout(50);
+//  BTSerial.setTimeout(50);
   delay(100);
 }
 
@@ -109,7 +108,7 @@ void loop() {
   
   // Read what is entered into serial monitor or bluetooth
   if (Serial.available()) {
-    BTSerial.write(Serial.read());
+//    BTSerial.write(Serial.read());
 
     cmdStr = Serial.readString();
     //Serial.println(cmdStr);
