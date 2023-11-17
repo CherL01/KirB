@@ -592,18 +592,9 @@ class ObstacleAvoidance():
         sensors_list = self.get_sensor_readings()
         print('sensor list 1: ', sensors_list)
 
-        if ML.initial is not True:
+        # run localization in initial square 
+        while ML.initial is True:
 
-<<<<<<< HEAD
-            # run localization in initial square 
-            while True:
-
-                # if in D1:
-                if (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 30):
-                    print('changed back sensor value')
-                    sensors_list[2] = 60
-                    print('changed sensor list: ', sensors_list)
-=======
             # if in D1:
             if (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 30) and (sensors_list[3] < 42):
                 print('in D1, changed back sensor value')
@@ -615,33 +606,27 @@ class ObstacleAvoidance():
                 print('in D6, changed right sensor')
                 sensors_list[3] = 60
                 print('changed sensor list: ', sensors_list)
->>>>>>> 323b3a48a8877ae9b8e4b6ddc9d34ee0c99305d3
 
-                elif (sensors_list[1] < ML.wall_limit) and (sensors_list[2] > 30):
-                    print('changed right sensor')
-                    sensors_list[3] = 60
-                    print('changed sensor list: ', sensors_list)
-
-                _, _, command_loc = ML.initial_localize(sensors_list)
+            _, _, command_loc = ML.initial_localize(sensors_list)
                 
-                if command_loc == ['']:
-                    print('initial localization done!')
-                    break
+            if command_loc == ['']:
+                print('initial localization done!')
+                break
 
-                command_ard = self.convert_command(command_loc[0])
-                    
-                for command in command_ard:
-                    print('initial localize command: ', command)
-                    self.move(command)
-                    self.parallel()
-                    
-                # get sensor readings in a list
-                sensors_list = self.get_sensor_readings()
-                print('sensor list (initial localize): ', sensors_list)
-                    
-                if command_loc != ['RT']:
-                    print('initial localization done!')
-                    break
+            command_ard = self.convert_command(command_loc[0])
+                
+            for command in command_ard:
+                print('initial localize command: ', command)
+                self.move(command)
+                self.parallel()
+                
+            # get sensor readings in a list
+            sensors_list = self.get_sensor_readings()
+            print('sensor list (initial localize): ', sensors_list)
+                
+            if command_loc != ['RT']:
+                print('initial localization done!')
+                break
 
             # run localization in initial square 
             # _, _, command_loc = ML.initial_localize(sensors_list)
