@@ -118,15 +118,15 @@ void loop() {
       MoveForward(cmdStr.toFloat());
       GetAllSensorReadings(numAvg);
       
-    } else if (cmdStr.charAt(0) == 'q') {
-      cmdStr.remove(0,3);
-      MoveForward2(cmdStr.toFloat());
-      GetAllSensorReadings(numAvg);
-      
-    } else if (cmdStr.charAt(0) == 'e') {
-      cmdStr.remove(0,3);
-      Rotate2(cmdStr.toFloat());
-      GetAllSensorReadings(numAvg);
+//    } else if (cmdStr.charAt(0) == 'q') {
+//      cmdStr.remove(0,3);
+//      MoveForward2(cmdStr.toFloat());
+//      GetAllSensorReadings(numAvg);
+//      
+//    } else if (cmdStr.charAt(0) == 'e') {
+//      cmdStr.remove(0,3);
+//      Rotate2(cmdStr.toFloat());
+//      GetAllSensorReadings(numAvg);
       
     } else if (cmdStr.charAt(0) == 'r') {
       cmdStr.remove(0,3);
@@ -135,7 +135,7 @@ void loop() {
       
     } else if (cmdStr.charAt(0) == 'u') {
       // Check which ultrasonic sensor we want to read from
-      int numAvg = 2;       // total avg time
+      int numAvg = 1;       // # of times it reads the sensors
       cmdStr.remove(0,1);   // remove first char u to determine which sensor to read from
       leftMotorCount = 0;
       rightMotorCount = 0;
@@ -235,7 +235,6 @@ void EncoderEvent() {
 }
 
 float ReadUltrasonicSensor(int sensorNum, int numAvg) {
-
   float tempVal = 0.0;
 
   for (int i=0; i< numAvg; i++) {
@@ -262,7 +261,6 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
 int GetAllSensorReadings(float numAvg) {
   //get all sensor readings at once (with command ua)
   float distanceBuffer[6];
-  
   String strBuffer;
   for (int i=0; i<6; i++) {
     distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
@@ -271,15 +269,12 @@ int GetAllSensorReadings(float numAvg) {
     strBuffer += "=";
     strBuffer += distanceBuffer[i];
     
-    
     // Send sensor values to OA code -> in order 1.front, 2.left-front, 3.left-back, 4.right-front, 5.right-back, 6. front-bottom
     // byte * b = (byte *) &distanceBuffer[i];
     // Serial.write(b, 8);
   }
-  
   // Serial.print("String buffer: ");      // for debug
   Serial.println(strBuffer);              // sends this back to python 
-  
 }
 
 int MoveForward(float movInches) {
@@ -319,28 +314,28 @@ int MoveForward(float movInches) {
   //DisableMotors();
 }
 
-int MoveForward2(float movInches) {
-  // ***only used for manual control, not autonomy (delays for 1 sec)***
-  float currentMillis = millis();
-  if (movInches > 0.0) {
-    // Move forward
-    LeftMotorForward();
-    RightMotorForward();
-    Serial.print("moving forward: ");
-    Serial.println(movInches);
-    //DisableMotors();
-  } else {
-    // Move backward
-    LeftMotorBackward();
-    RightMotorBackward();
-    Serial.print("moving backward: ");
-    Serial.println(movInches);
-    //DisableMotors();
-  }
-  delay(1000);
-  //TimeElapsed(currentMillis);
-  DisableMotors();
-}
+//int MoveForward2(float movInches) {
+//  // ***only used for manual control, not autonomy (delays for 1 sec)***
+//  float currentMillis = millis();
+//  if (movInches > 0.0) {
+//    // Move forward
+//    LeftMotorForward();
+//    RightMotorForward();
+//    Serial.print("moving forward: ");
+//    Serial.println(movInches);
+//    //DisableMotors();
+//  } else {
+//    // Move backward
+//    LeftMotorBackward();
+//    RightMotorBackward();
+//    Serial.print("moving backward: ");
+//    Serial.println(movInches);
+//    //DisableMotors();
+//  }
+//  delay(1000);
+//  //TimeElapsed(currentMillis);
+//  DisableMotors();
+//}
 
 int Rotate(float rotDegrees) {
   float currentMillis = millis();
@@ -379,28 +374,28 @@ int Rotate(float rotDegrees) {
   //DisableMotors();
 }
 
-int Rotate2(float rotDegrees) {
-  // ***only used for manual control, not autonomy (turns for 0.9 sec)***
-  float currentMillis = millis();
-  if (rotDegrees > 0.0) {
-    // Turn right
-    LeftMotorForward();
-    RightMotorBackward();
-    Serial.print("turning right: ");
-    Serial.println(rotDegrees);
-    //DisableMotors();
-  } else {
-    // Turn left
-    LeftMotorBackward();
-    RightMotorForward();
-    Serial.print("turning left: ");
-    Serial.println(rotDegrees);
-    //DisableMotors();
-  }
-  delay(900);
-  //TimeElapsed(currentMillis);
-  DisableMotors();
-}
+//int Rotate2(float rotDegrees) {
+//  // ***only used for manual control, not autonomy (turns for 0.9 sec)***
+//  float currentMillis = millis();
+//  if (rotDegrees > 0.0) {
+//    // Turn right
+//    LeftMotorForward();
+//    RightMotorBackward();
+//    Serial.print("turning right: ");
+//    Serial.println(rotDegrees);
+//    //DisableMotors();
+//  } else {
+//    // Turn left
+//    LeftMotorBackward();
+//    RightMotorForward();
+//    Serial.print("turning left: ");
+//    Serial.println(rotDegrees);
+//    //DisableMotors();
+//  }
+//  delay(900);
+//  //TimeElapsed(currentMillis);
+//  DisableMotors();
+//}
 
 void LeftMotorForward(void) {
   // testing code
@@ -414,7 +409,7 @@ void LeftMotorBackward(void) {
   // testing code
   digitalWrite(leftMotorIn3, LOW);
   digitalWrite(leftMotorIn4, HIGH);
-  analogWrite(leftMotorPin, LmotorSpeed-5);
+  analogWrite(leftMotorPin, LmotorSpeed-3);
   //delay(1000);
 }
 
@@ -446,10 +441,10 @@ int UpdateStage_LED(float stageNum) {
   }
 }
 
-int TimeElapsed(float currentMillis) {
-  float previousMillis = currentMillis;
-  currentMillis = millis();
-  float timeElapsed = (currentMillis - previousMillis);
-  Serial.print("Time Elapsed: ");
-  Serial.println(timeElapsed);      // prints the time elapsed
-}
+//int TimeElapsed(float currentMillis) {
+//  float previousMillis = currentMillis;
+//  currentMillis = millis();
+//  float timeElapsed = (currentMillis - previousMillis);
+//  Serial.print("Time Elapsed: ");
+//  Serial.println(timeElapsed);      // prints the time elapsed
+//}
