@@ -1,5 +1,6 @@
 #include <Wire.h>
 #include <NewPing.h>
+#include <Servo.h>
 
 //Define pins
 //SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
@@ -11,12 +12,14 @@
 #define TRIGGER_PIN4          51    // Right front
 #define TRIGGER_PIN5          52    // Right back
 #define TRIGGER_PIN6          53    // Back
+#define TRIGGER_PIN7          47    // Front bottom  // Doublecheck
 #define ECHO_PIN1             8     // Front sensor
 #define ECHO_PIN2             9     // Left front
 #define ECHO_PIN3             10    // Left back
 #define ECHO_PIN4             11    // Right front
 #define ECHO_PIN5             12    // Right back
 #define ECHO_PIN6             13    // Back
+#define ECHO_PIN7             7     // Front bottom  // Doublecheck
 #define MaxDistance           200
 
 NewPing sonar1(TRIGGER_PIN1, ECHO_PIN1, MaxDistance);
@@ -25,11 +28,16 @@ NewPing sonar3(TRIGGER_PIN3, ECHO_PIN3, MaxDistance);
 NewPing sonar4(TRIGGER_PIN4, ECHO_PIN4, MaxDistance);
 NewPing sonar5(TRIGGER_PIN5, ECHO_PIN5, MaxDistance);
 NewPing sonar6(TRIGGER_PIN6, ECHO_PIN6, MaxDistance);
+NewPing sonar7(TRIGGER_PIN7, ECHO_PIN7, MaxDistance);
 
 // LED pins
 int R_LED = 40;
 int B_LED = 41;
 int G_LED = 42;
+
+// Servo motors
+Servo ArmServo;
+Servo GripperServo;
 
 //Define functions
 void InitLEDs(void);
@@ -37,6 +45,12 @@ int UpdateStage_LED(float stageNum);
 void InitMotors(void);
 void InitInterrupts(void);
 void DisableMotors(void);
+void Parallel(void);
+double sensorDifferenceLimit = 0.15;
+int MoveArm(float rotDegrees);
+void OpenGripper(void);
+void CloseGripper(void);
+bool Start = false;
 
 float ReadUltrasonicSensor(int sensorNum, int numAvg);
 int Rotate(float rotDegrees);
@@ -44,8 +58,9 @@ int Rotate2(float rotDegrees);          // bigger rotate
 int MoveForward(float movInches);
 int MoveForward2(float movInches);      // bigger movement
 float L_encValPerInch = 97.305;         // henry's experiment calculated this constant
-float R_encValPerInch = 99;         // henry's trying something lol
+float R_encValPerInch = 99;             // henry's experiment calculated this constant
 int GetAllSensorReadings(float numAvg);
+float distanceBuffer[7];
 int numAvg = 2;       // total avg time
 
 void LeftMotorForward(void);
@@ -87,23 +102,16 @@ void setup() {
   // HC-05 default speed in AT command mode 
 //  BTSerial.begin(9600); 
   Serial.setTimeout(50);
-//  BTSerial.setTimeout(50);
   delay(100);
 }
 
 void loop() {
-    
-  //get all sensor readings at once (with command ua)
-  int numAvg = 2;       // total avg time
-  float distanceBuffer[6];
-  String strBuffer;
-  for (int i=0; i<6; i++) {
-    distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
-    strBuffer += (String)i;
-    strBuffer += "=";
-    strBuffer += distanceBuffer[i];
-    strBuffer += " | ";
+  delay(100);
+  // Always run parallel
+  if (Start==true) {
+    Parallel();
   }
+
   Serial.println(strBuffer);
   
   // Read what is entered into serial monitor or bluetooth
@@ -148,13 +156,28 @@ void loop() {
         float distance = ReadUltrasonicSensor(cmdStr.toInt(), numAvg);
         Serial.println(distance);
       }
+
+    // emergency stop - not used at the moment
+//    } else if (cmdStr.charAt(0) == 'x') {
+//      DisableMotors();
       
-    } else if (cmdStr.charAt(0) == 'x') {
-      DisableMotors();
+    } else if (cmdStr.charAt(0) == 'p') {
+      Parallel();
+
+    } else if (cmdStr.charAt(0) == 'a') {
+      cmdStr.remove(0,1);
+      MoveArm(180);
+      
+    } else if (cmdStr.charAt(0) == 'g') {
+      cmdStr.remove(0,1);
+      OpenGripper();
+      CloseGripper();
       
     } else if (cmdStr.charAt(0) == 's') {
-      cmdStr.remove(0,1);
-      UpdateStage_LED(cmdStr.toInt());      // takes commands of s1 (stage 1), s2, and s3
+      Start = true;
+    } else if (cmdStr.charAt(0) == 'l') {
+      cmdStr.remove(0,3);
+      UpdateStage_LED(cmdStr.toInt());      // turns on leds
       
     } else {
       Serial.println("Invalid command, please try again.");
@@ -177,7 +200,7 @@ void InitLEDs(void) {
 }
 
 void InitMotors(void) {
-  // Setting up motor pins
+  // Setting up DC motor pins
   pinMode(leftMotorPin, OUTPUT);        // pin 
   pinMode(rightMotorPin, OUTPUT);       // pin 
   
@@ -185,6 +208,10 @@ void InitMotors(void) {
   pinMode(rightMotorIn2, OUTPUT);        // pin 
   pinMode(leftMotorIn3, OUTPUT);        // pin 
   pinMode(leftMotorIn4, OUTPUT);        // 
+
+  //Servos
+  ArmServo.attach(6);
+  GripperServo.attach(7);
 }
 
 void InitInterrupts(void) {
@@ -204,7 +231,6 @@ void DisableMotors(void) {
 }
 
 void EncoderEvent() {
-  
   // Left Motor
   if (digitalRead(leftEncA) == HIGH) {      // A high
     if (digitalRead(leftEncB) == LOW) {
@@ -239,7 +265,7 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
   float tempVal = 0.0;
 
   for (int i=0; i< numAvg; i++) {
-    delay(80);
+    delay(10);
     float echoCM = 0;
     if (sensorNum == 1) {
       echoCM = sonar1.ping_cm();
@@ -253,6 +279,8 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
       echoCM = sonar5.ping_cm();
     } else if (sensorNum == 6) {
       echoCM = sonar6.ping_cm();
+    } else if (sensorNum == 7) {
+      echoCM = sonar7.ping_cm();
     }
     tempVal+= echoCM/2.54;    // sensor values -> convert to inches
   }
@@ -261,16 +289,14 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
 
 int GetAllSensorReadings(float numAvg) {
   //get all sensor readings at once (with command ua)
-  float distanceBuffer[6];
   String strBuffer;
-  for (int i=0; i<6; i++) {
+  for (int i=0; i<7; i++) {
     distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
     strBuffer += " | ";
     strBuffer += (String)i;
     strBuffer += "=";
     strBuffer += distanceBuffer[i];
-    
-    // Send sensor values to OA code -> in order 1.front, 2.left-front, 3.left-back, 4.right-front, 5.right-back, 6. front-bottom
+    // Send sensor values to OA code -> in order 1.front, 2.left-front, 3.left-back, 4.right-front, 5.right-back, 6. back, 7.front-bottom
     // byte * b = (byte *) &distanceBuffer[i];
     // Serial.write(b, 8);
   }
@@ -279,8 +305,7 @@ int GetAllSensorReadings(float numAvg) {
 }
 
 int MoveForward(float movInches) {
-  float currentMillis = millis();
-
+  //float currentMillis = millis();
   // Calculate the distance in terms of encoder values, and once encoder value is reached must stop
   float L_encoderChange = int(movInches*L_encValPerInch);
   float R_encoderChange = int(movInches*R_encValPerInch);
@@ -297,7 +322,6 @@ int MoveForward(float movInches) {
     }
     delay(10);
     DisableMotors();
-    
   } else {
     // Move backward
 //    Serial.print("moving backward: ");
@@ -309,7 +333,6 @@ int MoveForward(float movInches) {
     delay(10);
     DisableMotors();
   }
-  
   delay(10);
   //TimeElapsed(currentMillis);
   //DisableMotors();
@@ -339,8 +362,7 @@ int MoveForward(float movInches) {
 //}
 
 int Rotate(float rotDegrees) {
-  float currentMillis = millis();
-
+  //float currentMillis = millis();
   // Calculate the distance in terms of encoder values, and once encoder valueis reached must stop
   float L_encoderChange = int((rotDegrees*L_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
   float R_encoderChange = int((rotDegrees*R_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
@@ -357,7 +379,6 @@ int Rotate(float rotDegrees) {
     }
     delay(10);
     DisableMotors();
-    
   } else {
     // Turn left
 //    Serial.print("turning left: ");
@@ -369,7 +390,6 @@ int Rotate(float rotDegrees) {
     delay(10);
     DisableMotors();
   }   
-
   delay(10);
   //TimeElapsed(currentMillis);
   //DisableMotors();
@@ -442,10 +462,76 @@ int UpdateStage_LED(float stageNum) {
   }
 }
 
-//int TimeElapsed(float currentMillis) {
-//  float previousMillis = currentMillis;
-//  currentMillis = millis();
-//  float timeElapsed = (currentMillis - previousMillis);
-//  Serial.print("Time Elapsed: ");
-//  Serial.println(timeElapsed);      // prints the time elapsed
-//}
+void Parallel(void) {
+  // get sensor readings
+  GetAllSensorReadings(numAvg);
+  
+  // get difference btw left sensors and difference btw right sensors
+  // distanceBuffer[7] --> 0.front, 1.left-front, 2.left-back, 3.right-front, 4.right-back, 5. back, 6.front-bottom
+  float L_sensor_diff = abs(distanceBuffer[1]-distanceBuffer[2]);
+  float R_sensor_diff = abs(distanceBuffer[3]-distanceBuffer[4]);
+  
+  // get closest sensor
+  float closestSensor = 100;
+  int closestSensorIndex = 0;
+  for (int i=1; i<=4; i++) {
+    if (closestSensor>distanceBuffer[i]) {
+       closestSensor = distanceBuffer[i];       // value of closest sensor
+       closestSensorIndex = i;                  // index of closest sensor
+    }
+  }
+ 
+  // calculate avg left sensor and avg right sensor values
+  float L_sense = (distanceBuffer[1]+distanceBuffer[2])/2;
+  float R_sense = (distanceBuffer[3]+distanceBuffer[4])/2;
+  
+  // check left and right side difference to center itself. if kirb in a hallway (L+R < 10)
+  if (L_sense + R_sense < 10) {
+    if (L_sense > R_sense+2) {
+      Rotate(-6);         // doublecheck if this works
+    } else if (R_sense > L_sense+2) {
+      Rotate(6);
+    }
+  }
+
+  // both sides over the sensor difference limit (not parallel)
+  if (L_sensor_diff > sensorDifferenceLimit && R_sensor_diff > sensorDifferenceLimit) {
+    if (closestSensorIndex == 1) {
+      Rotate(6);
+    } else if (closestSensorIndex == 2) {
+      Rotate(-6);
+    } else if (closestSensorIndex == 3) {
+      Rotate(-6);
+    } else if (closestSensorIndex == 4) {
+      Rotate(6);
+    }
+  }
+  
+
+  // if too close to a wall (less than estop limit, check_turn_clearance()
+
+  // if not initialized yet, need to keep swimming, move forward 4 inches or backward 2 inches
+  
+}
+
+int MoveArm(float rotDegrees) {
+  ArmServo.write(rotDegrees); // sets the servo position according to the scaled value
+  delay(2000);                // waits for the servo to get there
+  return rotDegrees;
+}
+
+void OpenGripper(void) {
+  // this only sets the speed. To stop, use GripperServo.write(90)
+  //To open
+  //GripperServo.write();   // calibrate
+  delay(2000);
+  GripperServo.write(90);
+}
+
+void CloseGripper(void) {
+  // this only sets the speed. To stop, use GripperServo.write(90)
+  //To close
+  //GripperServo.write();     // calibrate
+  delay(2000);              // calibrate
+  GripperServo.write(90);   // might not need to stop, keep "closing" to hold grip
+}
