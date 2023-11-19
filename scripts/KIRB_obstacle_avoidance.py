@@ -10,7 +10,7 @@ from datetime import datetime
 from KIRB_python_arduino import PyArduino 
 from KIRB_localization import MazeLocalization
 
-PA = PyArduino(com_port="COM4")
+PA = PyArduino(com_port="COM7")
 ML = MazeLocalization()
 
 ##### MOVE TO PYARDUINO #####
@@ -237,8 +237,10 @@ class ObstacleAvoidance():
             # print('message: ', message)
             
             try:
-                for sensor in message.split('|')[:6]:
+                # print('message split: ', message.split('|')[1:7])
+                for sensor in message.split('|')[1:7]:
                     label, reading = sensor.split('=')
+                    # print("label/reading: ", label, reading)
                     self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
 
             except ValueError:
@@ -578,14 +580,12 @@ class ObstacleAvoidance():
         # self.move( 'ua')
 
         # travels through the maze purely on obstale avoidance until robot is in a localizable square
-        print('\nstart parallel')
+        # print('\nstart parallel')
         self.move('start')
-        print('going into loop')
+        # print('going into loop')
         while True:
-            print('in loop')
-            sensor_list = self.get_sensor_readings()
-            print(sensor_list)
-            if self.localizable_square_detection() is False:
+            # print('in loop')
+            if self.localizable_square_detection() is True:
                 break
             # print('\nattempt to run parallel')
             print('\nattempt to go straight')
@@ -737,6 +737,8 @@ class ObstacleAvoidance():
                 
                 # # give time for robot to travel in maze
                 # time.sleep(3)
+
+            # self.move('xx')
 
             print('reached drop off zone!')
             self.move('led2')

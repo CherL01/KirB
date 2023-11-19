@@ -52,15 +52,17 @@ void OpenGripper(void);
 void CloseGripper(void);
 bool Start = false;
 
-float ReadUltrasonicSensor(int sensorNum, int numAvg);
 int Rotate(float rotDegrees);
 int Rotate2(float rotDegrees);          // bigger rotate
 int MoveForward(float movInches);
 int MoveForward2(float movInches);      // bigger movement
 float L_encValPerInch = 97.305;         // henry's experiment calculated this constant
 float R_encValPerInch = 99;             // henry's experiment calculated this constant
+
+float ReadUltrasonicSensor(int sensorNum, int numAvg);
 int GetAllSensorReadings(float numAvg);
 float distanceBuffer[7];
+String strBuffer;
 int numAvg = 2;       // total avg time
 
 void LeftMotorForward(void);
@@ -111,8 +113,9 @@ void loop() {
   if (Start==true) {
     Parallel();
   }
-
-  Serial.println(strBuffer);
+  
+//  // sending sensor values to OA/ML/BD
+//  Serial.println(strBuffer);
   
   // Read what is entered into serial monitor or bluetooth
   if (Serial.available()) {
@@ -289,7 +292,7 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
 
 int GetAllSensorReadings(float numAvg) {
   //get all sensor readings at once (with command ua)
-  String strBuffer;
+  strBuffer = "";
   for (int i=0; i<7; i++) {
     distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
     strBuffer += " | ";
