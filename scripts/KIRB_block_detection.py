@@ -1,0 +1,3 @@
+import math
+
+class BlockDetection():
