@@ -180,7 +180,7 @@ class MazeLocalization():
     def potential_square_heading_pairs(self, sensor_readings):
         '''
         input: list of sensor readings (F, L, B, R)
-        output: list of tuples of potential squares labels and their respective headings (N, S, E, W), (REMOVED IN NEW VERSION) if rotation is required
+        output: list of tuples of potential squares labels and their respective headings (N, S, E, W), (ROTATION SHOULD ALWAYS BE FALSE IN NEW MODIFICATION) if rotation is required
 
         note: this function is for initial conditions ONLY (after robot travels to a wall to ensure that it is in a square)
         '''
@@ -221,7 +221,7 @@ class MazeLocalization():
 
         square_heading_pairs = list(zip(potential_squares, headings))
 
-        return square_heading_pairs #, rotate
+        return square_heading_pairs, rotate
             
     def gaussian_prob(self, mu, sigma, x):
         '''
