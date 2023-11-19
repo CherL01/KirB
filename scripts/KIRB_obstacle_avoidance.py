@@ -735,5 +735,8 @@ OA.localize_and_navigate('loading zone')
 # # navigates to a localizable square
 # OA.initial_navigation()
 
+ML.initial = False
+ML.localized = True
+
 # tries to localize then travel to drop off zone
 OA.localize_and_navigate('drop off zone', drop_off_loc)

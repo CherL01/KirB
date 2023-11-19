@@ -474,8 +474,8 @@ class MazeLocalization():
 
         # once path for loading zone is obtained, set loading zone to True, reset initial and localized variables
         self.loading_zone = True
-        self.initial = False # True
-        self.localized = True # False
+        self.initial = True
+        self.localized = False
         self.current_location = (loading_zone_path[-1], path_commands[-1][-1])
 
         return loading_zone_path, path_commands
