@@ -10,7 +10,7 @@ from datetime import datetime
 from KIRB_python_arduino import PyArduino 
 from KIRB_localization import MazeLocalization
 
-PA = PyArduino(com_port="COM7")
+PA = PyArduino(com_port="COM4")
 ML = MazeLocalization()
 
 ##### MOVE TO PYARDUINO #####
