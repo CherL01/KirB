@@ -125,14 +125,14 @@ class ObstacleAvoidance():
         if '--' in command:
             while turn_deg > 0:
                 self.move('r0--90')
-                self.parallel()
+                # self.parallel()
                 # if self.sensor_label2reading_dict['u5']:
                 #     self.move('w0--1')
                 turn_deg -= 90
 
         elif '-' in command:
             while turn_deg > 0:
-                self.parallel()
+                # self.parallel()
                 self.move('r0-90')
                 # if self.sensor_label2reading_dict['u5']:
                 #     self.move('w0--1')
@@ -159,10 +159,9 @@ class ObstacleAvoidance():
     #     # if forwards
     #     elif '-' in command:
     #         while distance > 0:
-    #             self.parallel()
+    #             # self.parallel()
     #             self.move('w0-12')
     #             distance -= 12
-
 
     def localizable_square_detection(self):
         '''
@@ -323,10 +322,10 @@ class ObstacleAvoidance():
             # if the front is too close, move back. if the back is too close, move up
             if sensor_list[0] < front_turn_limit:
                 self.move("w0--1")
-                self.parallel()
+                # self.parallel()
             elif sensor_list[2] < self.e_stop_limit:
                 self.move("w0-0.75")
-                self.parallel()
+                # self.parallel()
                 
             sensor_list = self.get_sensor_readings()
                     
@@ -352,13 +351,13 @@ class ObstacleAvoidance():
                 self.move('w0--1')
                 self.move('r0-15')
                 self.move('w0-1')
-                # self.parallel()
+                # # self.parallel()
             elif sensor_list[3] < sides_turn_limit:
                 self.move('r0-15')
                 self.move('w0--1')
                 self.move('r0--12')
                 self.move('w0-1')
-                # self.parallel()
+                # # self.parallel()
             
             sensor_list = self.get_sensor_readings()
                     
@@ -579,9 +578,19 @@ class ObstacleAvoidance():
         # self.move( 'ua')
 
         # travels through the maze purely on obstale avoidance until robot is in a localizable square
-        while self.localizable_square_detection() is False:
-            print('\nattempt to run parallel')
-            self.parallel(initial=True)
+        print('\nstart parallel')
+        self.move('start')
+        print('going into loop')
+        while True:
+            print('in loop')
+            sensor_list = self.get_sensor_readings()
+            print(sensor_list)
+            if self.localizable_square_detection() is False:
+                break
+            # print('\nattempt to run parallel')
+            print('\nattempt to go straight')
+            self.move('w0-4')
+            # self.parallel(initial=True)
 
         print('localizable square found!')
         
@@ -601,19 +610,19 @@ class ObstacleAvoidance():
         while ML.initial is True:
 
             # if in D1, W:
-            if (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 30) and (sensors_list[3] < 42):
+            if (sensors_list[1] < ML.wall_limit) and (sensors_list[2] > 42): # and (sensors_list[3] > 30)
                 print('in D1 (W), changed back sensor value')
                 sensors_list[2] = 60
                 print('changed sensor list: ', sensors_list)
 
             # if in D1, S:
-            elif (sensors_list[3] < ML.wall_limit) and (sensors_list[2] > 30) and (sensors_list[2] < 42):
+            if (sensors_list[3] < ML.wall_limit) and (sensors_list[2] > 35) and (sensors_list[1] > 30): # and (sensors_list[2] < 42):
                 print('in D1 (S), changed left sensor value')
                 sensors_list[1] = 60
                 print('changed sensor list: ', sensors_list)
 
             # if in D6, S:
-            elif (sensors_list[1] < ML.wall_limit) and (sensors_list[2] > 26) and (sensors_list[3] > 30):
+            elif (sensors_list[1] < ML.wall_limit) and (36 < sensors_list[2] < 42) and (sensors_list[3] > 37):
                 print('in D6 (S), changed right sensor')
                 sensors_list[3] = 60
                 print('changed sensor list: ', sensors_list)
@@ -635,7 +644,7 @@ class ObstacleAvoidance():
             for command in command_ard:
                 print('initial localize command: ', command)
                 self.move(command)
-                self.parallel()
+                # self.parallel()
                 
             # get sensor readings in a list
             sensors_list = self.get_sensor_readings()
@@ -668,7 +677,7 @@ class ObstacleAvoidance():
 
             for command in command_ard:
                 self.move(command)
-                self.parallel()
+                # self.parallel()
 
             sensors_list = self.get_sensor_readings()
 
@@ -684,13 +693,13 @@ class ObstacleAvoidance():
 
                 for command in command_ard:
                     # # MAY MOVE THIS SOMEWHERE ELSE
-                    # self.parallel()
+                    # # self.parallel()
 
                     print('command (during navigation): ', command)
                     self.move(command)
 
                     # # MAY MOVE THIS SOMEWHERE ELSE
-                    self.parallel()
+                    # self.parallel()
                 
                 # # give time for robot to travel in maze
                 # time.sleep(3)
@@ -702,7 +711,7 @@ class ObstacleAvoidance():
                 #     self.localize_and_navigate('loading_zone')
 
             print('reached localization zone!')
-            self.move('s1')
+            self.move('led1')
             print('loading zone - current location: ', ML.current_location)
 
         # navigate to drop off zone
@@ -718,20 +727,20 @@ class ObstacleAvoidance():
 
                 for command in command_ard:
                     # # MAY MOVE THIS SOMEWHERE ELSE
-                    # self.parallel()
+                    # # self.parallel()
 
                     print('command (during navigation): ', command)
                     self.move(command)
 
                     # # MAY MOVE THIS SOMEWHERE ELSE
-                    self.parallel()
+                    # self.parallel()
                 
                 # # give time for robot to travel in maze
                 # time.sleep(3)
 
             print('reached drop off zone!')
-            self.move('s2')
-            self.move('s3')
+            self.move('led2')
+            self.move('led3')
 
 
 drop_off_loc = 'A6'
