@@ -12,6 +12,7 @@ from KIRB_localization import MazeLocalization
 
 PA = PyArduino(com_port="COM7")
 ML = MazeLocalization()
+BD = BlockDetection()
 
 ##### MOVE TO PYARDUINO #####
 
@@ -57,8 +58,8 @@ class ObstacleAvoidance():
         self.running = True
 
         # store sensor labels, sensors, and sensor names in lists/dicts
-        # ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK']
-        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5']
+        # ['FRONT', 'FRONT-LEFT', 'BACK-LEFT', 'FRONT-RIGHT', 'BACK-RIGHT', 'BACK', 'FRONT_BOTTOM']
+        self.sensor_label_list = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5', 'u6']
         self.sensor_label2reading_dict = {}
         for l, s in zip(self.sensor_label_list, [0 for _ in range(len(self.sensor_label_list))]):
             self.sensor_label2reading_dict[l] = s
@@ -237,8 +238,8 @@ class ObstacleAvoidance():
             # print('message: ', message)
             
             try:
-                # print('message split: ', message.split('|')[1:7])
-                for sensor in message.split('|')[1:7]:
+                # print('message split: ', message.split('|')[1:8])
+                for sensor in message.split('|')[1:8]:
                     label, reading = sensor.split('=')
                     # print("label/reading: ", label, reading)
                     self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
@@ -301,7 +302,7 @@ class ObstacleAvoidance():
         front_turn_limit = 2.0
         sides_turn_limit = 2.76
         
-        sensor_list = self.get_sensor_readings()
+        sensor_list = self.get_sensor_readings()    # 4 values for each side of the rover [F,L,B,R]
         
         # no wall in front
         if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
@@ -349,16 +350,20 @@ class ObstacleAvoidance():
             print('not enough side clearance')
             # if the sides are too close, adjust                
             if sensor_list[1] < sides_turn_limit:
+                self.move('x')  # turn off parallel
                 self.move('r0--15')
                 self.move('w0--1')
-                self.move('r0-15')
+                self.move('r0-13')
                 self.move('w0-1')
+                self.move('s')  # turn on parallel
                 # # self.parallel()
             elif sensor_list[3] < sides_turn_limit:
+                self.move('x')  # turn off parallel
                 self.move('r0-15')
                 self.move('w0--1')
-                self.move('r0--12')
+                self.move('r0--13')
                 self.move('w0-1')
+                self.move('s')  # turn on parallel
                 # # self.parallel()
             
             sensor_list = self.get_sensor_readings()
