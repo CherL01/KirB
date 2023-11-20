@@ -172,8 +172,6 @@ class MazeLocalization():
             # multiply number of squares by distance to get theoretical reading
             # added sensor tolerance for extra distance since measurement from sensor isnt directly on the edge of a square
             theoretical_values.append(num_loops * self.square_dim + self.sensor_tolerance)
-        # print('square label/heading: ', square_label, heading)
-        # print('theoretical value: ', theoretical_values)
 
         return theoretical_values
     
@@ -395,10 +393,9 @@ class MazeLocalization():
 
         # get square labels, headings, if rotation is required
         square_heading_pairs, rotation = self.potential_square_heading_pairs(sensor_readings)
-        # print('square heading pairs: ', square_heading_pairs)
 
         # if rotation is required, return rotation command to main script
-        if rotation == True:
+        if rotation is True:
             print('\nlocalized (KIRB_localization): ', self.localized)
             return self.localized, square_heading_pairs, ['RT'] # RT = right turn, can change right turn command later to fit generalized command
 
@@ -432,14 +429,9 @@ class MazeLocalization():
         input: sensor readings
         output: True if robot localized (False otherwise), current location(s), list of movements to complete localization process
         '''
-
-        # # if robot is not localized
-        # elif self.localized == False:
         
-        # print('localized (SHOULD RETURN FALSE): ', self.localized)
         print('\n(localize) sensor readings: ', sensor_readings)
         
-
         # get probabilities for new potential square label and heading pairs
         new_square_heading_pairs_reordered, new_square_probs = self.prob_after_moving(self.last_movement, sensor_readings, self.square_heading_pairs)
         print('new square heading pairs: ', new_square_heading_pairs_reordered)
@@ -468,9 +460,6 @@ class MazeLocalization():
         input: self
         output: path to loading zone, list of movements to complete navigation process
         '''    
-    
-        # # robot is localized, navigate to loading zone
-        # elif self.loading_zone == False:
 
         # get the shortest path to loading zone
         loading_zone_path = self.bfs(['A2', 'B1'])
@@ -489,7 +478,6 @@ class MazeLocalization():
         input: self
         output: path to drop off zone, list of movements to complete navigation process
         '''
-        # else:
 
         # get the shortest path to drop off zone
         drop_off_zone_path = self.bfs([drop_off_loc])
