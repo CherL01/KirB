@@ -53,9 +53,7 @@ void CloseGripper(void);
 bool Start = false;
 
 int Rotate(float rotDegrees);
-int Rotate2(float rotDegrees);          // bigger rotate
 int MoveForward(float movInches);
-int MoveForward2(float movInches);      // bigger movement
 float L_encValPerInch = 97.305;         // henry's experiment calculated this constant
 float R_encValPerInch = 99;             // henry's experiment calculated this constant
 
@@ -112,35 +110,25 @@ void loop() {
   // Always run parallel
   if (Start==true) {
     Parallel();
+  } else if (Start==false) {
+    DisableMotors();
   }
   
-//  // sending sensor values to OA/ML/BD
-//  Serial.println(strBuffer);
-  
-  // Read what is entered into serial monitor or bluetooth
+  // Read what is transmitted onto arduino from python code
   if (Serial.available()) {
 //    BTSerial.write(Serial.read());
 
     cmdStr = Serial.readString();
-    //Serial.println(cmdStr);
     
     if (cmdStr.charAt(0) == 'w') {
+      // Moves forward/backward depending on number of inches sent
       // Remove first 3 characters to only get inch distance value (ex. w0-20 to 20, w0--10 to -10)
       cmdStr.remove(0,3);
       MoveForward(cmdStr.toFloat());
       GetAllSensorReadings(numAvg);
       
-//    } else if (cmdStr.charAt(0) == 'q') {
-//      cmdStr.remove(0,3);
-//      MoveForward2(cmdStr.toFloat());
-//      GetAllSensorReadings(numAvg);
-//      
-//    } else if (cmdStr.charAt(0) == 'e') {
-//      cmdStr.remove(0,3);
-//      Rotate2(cmdStr.toFloat());
-//      GetAllSensorReadings(numAvg);
-      
     } else if (cmdStr.charAt(0) == 'r') {
+      // Rotates depending on number of degrees sent
       cmdStr.remove(0,3);
       Rotate(cmdStr.toFloat());
       GetAllSensorReadings(numAvg);
@@ -160,25 +148,36 @@ void loop() {
         Serial.println(distance);
       }
 
-    // emergency stop - not used at the moment
-//    } else if (cmdStr.charAt(0) == 'x') {
-//      DisableMotors();
-      
     } else if (cmdStr.charAt(0) == 'p') {
+      // Runs parallel. This is also in the loop.
       Parallel();
 
     } else if (cmdStr.charAt(0) == 'a') {
+      // Moves arm up and down depending on what degrees is sent
       cmdStr.remove(0,1);
-      MoveArm(180);
+      MoveArm(cmdStr.toInt());
       
     } else if (cmdStr.charAt(0) == 'g') {
+      // Moves the gripper - 'go' for gripper open and 'gc' for gripper close
       cmdStr.remove(0,1);
-      OpenGripper();
-      CloseGripper();
+      if (cmdStr.charAt(0) == 'o') {
+        OpenGripper();
+      } else if (cmdStr.charAt(0) == 'c') {
+        CloseGripper();
+      }
       
     } else if (cmdStr.charAt(0) == 's') {
+      // Enables the parallel function in the loop
       Start = true;
+
+    } else if (cmdStr.charAt(0) == 'x') {
+      // Emergency stop, also disables the parallel function in the loop
+      DisableMotors();
+      Start = false;
+      
     } else if (cmdStr.charAt(0) == 'l') {
+      // Lights up the LED depending on which stage 
+      // 1. localized in Loading Zone (RED), 2. Picked up Block (BLUE), 3. Dropped Block in Drop-off Zone (GREEN)
       cmdStr.remove(0,3);
       UpdateStage_LED(cmdStr.toInt());      // turns on leds
       
@@ -204,15 +203,15 @@ void InitLEDs(void) {
 
 void InitMotors(void) {
   // Setting up DC motor pins
-  pinMode(leftMotorPin, OUTPUT);        // pin 
-  pinMode(rightMotorPin, OUTPUT);       // pin 
+  pinMode(leftMotorPin, OUTPUT);         
+  pinMode(rightMotorPin, OUTPUT);        
   
-  pinMode(rightMotorIn1, OUTPUT);        // pin
-  pinMode(rightMotorIn2, OUTPUT);        // pin 
-  pinMode(leftMotorIn3, OUTPUT);        // pin 
-  pinMode(leftMotorIn4, OUTPUT);        // 
+  pinMode(rightMotorIn1, OUTPUT);       
+  pinMode(rightMotorIn2, OUTPUT);        
+  pinMode(leftMotorIn3, OUTPUT);         
+  pinMode(leftMotorIn4, OUTPUT);        
 
-  //Servos
+  //Servo motors pins
   ArmServo.attach(6);
   GripperServo.attach(7);
 }
@@ -299,16 +298,12 @@ int GetAllSensorReadings(float numAvg) {
     strBuffer += (String)i;
     strBuffer += "=";
     strBuffer += distanceBuffer[i];
-    // Send sensor values to OA code -> in order 1.front, 2.left-front, 3.left-back, 4.right-front, 5.right-back, 6. back, 7.front-bottom
-    // byte * b = (byte *) &distanceBuffer[i];
-    // Serial.write(b, 8);
   }
-  // Serial.print("String buffer: ");      // for debug
+  // Send sensor values to OA code -> in order 0.front, 1.left-front, 2.left-back, 3.right-front, 4.right-back, 5. back, 6.front-bottom
   Serial.println(strBuffer);              // sends this back to python 
 }
 
 int MoveForward(float movInches) {
-  //float currentMillis = millis();
   // Calculate the distance in terms of encoder values, and once encoder value is reached must stop
   float L_encoderChange = int(movInches*L_encValPerInch);
   float R_encoderChange = int(movInches*R_encValPerInch);
@@ -317,8 +312,6 @@ int MoveForward(float movInches) {
   
   if (movInches > 0.0) {
     // Move forward
-//    Serial.print("moving forward: ");
-//    Serial.println(movInches);
     while (leftMotorCount < prev_leftMotorCount+L_encoderChange && rightMotorCount < prev_rightMotorCount+R_encoderChange) {
       LeftMotorForward();
       RightMotorForward();
@@ -327,8 +320,6 @@ int MoveForward(float movInches) {
     DisableMotors();
   } else {
     // Move backward
-//    Serial.print("moving backward: ");
-//    Serial.println(movInches);
     while (leftMotorCount > prev_leftMotorCount+L_encoderChange && rightMotorCount > prev_rightMotorCount+R_encoderChange) {
       LeftMotorBackward();
       RightMotorBackward();
@@ -337,35 +328,10 @@ int MoveForward(float movInches) {
     DisableMotors();
   }
   delay(10);
-  //TimeElapsed(currentMillis);
   //DisableMotors();
 }
 
-//int MoveForward2(float movInches) {
-//  // ***only used for manual control, not autonomy (delays for 1 sec)***
-//  float currentMillis = millis();
-//  if (movInches > 0.0) {
-//    // Move forward
-//    LeftMotorForward();
-//    RightMotorForward();
-//    Serial.print("moving forward: ");
-//    Serial.println(movInches);
-//    //DisableMotors();
-//  } else {
-//    // Move backward
-//    LeftMotorBackward();
-//    RightMotorBackward();
-//    Serial.print("moving backward: ");
-//    Serial.println(movInches);
-//    //DisableMotors();
-//  }
-//  delay(1000);
-//  //TimeElapsed(currentMillis);
-//  DisableMotors();
-//}
-
 int Rotate(float rotDegrees) {
-  //float currentMillis = millis();
   // Calculate the distance in terms of encoder values, and once encoder valueis reached must stop
   float L_encoderChange = int((rotDegrees*L_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
   float R_encoderChange = int((rotDegrees*R_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
@@ -374,8 +340,6 @@ int Rotate(float rotDegrees) {
   
   if (rotDegrees > 0.0) {
     // Turn right
-//    Serial.print("turning right: ");
-//    Serial.println(rotDegrees);
     while (leftMotorCount < prev_leftMotorCount+L_encoderChange && rightMotorCount > prev_rightMotorCount-R_encoderChange) {
       LeftMotorForward();
       RightMotorBackward();                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
@@ -384,8 +348,6 @@ int Rotate(float rotDegrees) {
     DisableMotors();
   } else {
     // Turn left
-//    Serial.print("turning left: ");
-//    Serial.println(rotDegrees);
     while (leftMotorCount > prev_leftMotorCount+L_encoderChange && rightMotorCount < prev_rightMotorCount-R_encoderChange) {
       LeftMotorBackward();
       RightMotorForward();
@@ -394,35 +356,11 @@ int Rotate(float rotDegrees) {
     DisableMotors();
   }   
   delay(10);
-  //TimeElapsed(currentMillis);
   //DisableMotors();
 }
 
-//int Rotate2(float rotDegrees) {
-//  // ***only used for manual control, not autonomy (turns for 0.9 sec)***
-//  float currentMillis = millis();
-//  if (rotDegrees > 0.0) {
-//    // Turn right
-//    LeftMotorForward();
-//    RightMotorBackward();
-//    Serial.print("turning right: ");
-//    Serial.println(rotDegrees);
-//    //DisableMotors();
-//  } else {
-//    // Turn left
-//    LeftMotorBackward();
-//    RightMotorForward();
-//    Serial.print("turning left: ");
-//    Serial.println(rotDegrees);
-//    //DisableMotors();
-//  }
-//  delay(900);
-//  //TimeElapsed(currentMillis);
-//  DisableMotors();
-//}
-
 void LeftMotorForward(void) {
-  // testing code
+  // left motor rotates forward
   digitalWrite(leftMotorIn3, HIGH);
   digitalWrite(leftMotorIn4, LOW);
   analogWrite(leftMotorPin, LmotorSpeed);
@@ -430,7 +368,7 @@ void LeftMotorForward(void) {
 }
 
 void LeftMotorBackward(void) {
-  // testing code
+  // left motor rotates backward
   digitalWrite(leftMotorIn3, LOW);
   digitalWrite(leftMotorIn4, HIGH);
   analogWrite(leftMotorPin, LmotorSpeed-8);
@@ -438,7 +376,7 @@ void LeftMotorBackward(void) {
 }
 
 void RightMotorForward(void) {
-  // testing code
+  // right motor rotates forward
   digitalWrite(rightMotorIn1, HIGH);
   digitalWrite(rightMotorIn2, LOW);
   analogWrite(rightMotorPin, RmotorSpeed-6);
@@ -446,7 +384,7 @@ void RightMotorForward(void) {
 }
 
 void RightMotorBackward(void) {
-  // testing code
+  // right motor rotates backward
   digitalWrite(rightMotorIn1, LOW);
   digitalWrite(rightMotorIn2, HIGH);
   analogWrite(rightMotorPin, RmotorSpeed);
@@ -454,6 +392,8 @@ void RightMotorBackward(void) {
 }
 
 int UpdateStage_LED(float stageNum) {
+  // LED lights up
+  // 1. localized in Loading Zone (RED), 2. Picked up Block (BLUE), 3. Dropped Block in Drop-off Zone (GREEN)
   if (stageNum == 1) {
     digitalWrite(R_LED, HIGH);
   }
@@ -510,7 +450,6 @@ void Parallel(void) {
     }
   }
   
-
   // if too close to a wall (less than estop limit, check_turn_clearance()
 
   // if not initialized yet, need to keep swimming, move forward 4 inches or backward 2 inches
