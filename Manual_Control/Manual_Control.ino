@@ -107,12 +107,16 @@ void setup() {
 
 void loop() {
   delay(100);
-  // Always run parallel
+
+  // enables and disables parallel
   if (Start==true) {
     Parallel();
   } else if (Start==false) {
     DisableMotors();
   }
+
+  // send sensor values to python (even when parallel is off)
+  GetAllSensorReadings(numAvg);
   
   // Read what is transmitted onto arduino from python code
   if (Serial.available()) {
