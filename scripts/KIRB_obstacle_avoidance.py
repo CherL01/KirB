@@ -423,11 +423,15 @@ class ObstacleAvoidance():
                 sensors_list[1] = 60
                 print('changed sensor list: ', sensors_list)
 
-            # if in D6, S:
+            # if in D6, S OR A1, N:
             elif (sensors_list[1] < ML.wall_limit) and (36 < sensors_list[2] < 42) and (sensors_list[3] > 37):
-                print('in D6 (S), changed right sensor')
-                sensors_list[3] = 60
-                print('changed sensor list: ', sensors_list)
+                if ML.loading_zone is False:
+                    print('in D6 (S), changed right sensor')
+                    sensors_list[3] = 60
+                    print('changed sensor list: ', sensors_list)
+
+                elif ML.loading_zone is True:
+                    print(' in A1 (N), did not change sensor values')
 
             # if in D6, E:
             elif (sensors_list[3] < ML.wall_limit) and (sensors_list[1] > 26) and (sensors_list[2] > 30):
