@@ -113,6 +113,8 @@ void loop() {
   } else if (Start==false) {
     DisableMotors();
   }
+
+  GetAllSensorReadings(numAvg);
   
   // Read what is transmitted onto arduino from python code
   if (Serial.available()) {
