@@ -214,8 +214,8 @@ void InitMotors(void) {
   pinMode(leftMotorIn4, OUTPUT);        
 
 //  //Servo motors pins
-//  ArmServo.attach(6);
-//  GripperServo.attach(7);
+  ArmServo.attach(45);        // needs pwm pins
+//  GripperServo.attach(46);    // needs pwm pins
 }
 
 void InitInterrupts(void) {

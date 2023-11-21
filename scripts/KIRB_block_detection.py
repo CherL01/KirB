@@ -54,10 +54,10 @@ class BlockDetection():
         
         if front_bot_sensor_diff > self.front_sensor_diff_limit:
             # move the robot forward/backward to get in proper spot to pick up the block
-            if sensor_dict['u6'] > 5: 
+            if sensor_dict['u6'] > 6: 
                 return self.pick_up_range, ['w0-0.5']
             
-            elif sensor_dict['u6'] < 2:
+            elif sensor_dict['u6'] < 4:
                 return self.pick_up_range, ['w0--0.5']
             
         else:
@@ -73,7 +73,7 @@ class BlockDetection():
         '''
         
         # move arm down, open gripper, move forward, close gripper, move arm up
-        return ['a180', 'go', 'w0-1', 'gc', 'a-180']
+        return ['a-120', 'go', 'w0-1', 'gc', 'a180']
     
     def drop_off_block(self):
         ''' 
@@ -84,4 +84,4 @@ class BlockDetection():
         '''
         
         # move back 5 inches to give room, move arm down, open gripper, move back, close gripper, move arm up
-        return ['w0--5', 'a180', 'go', 'w0--1', 'gc', 'a-180']
+        return ['w0--5', 'a-120', 'go', 'w0--1', 'gc', 'a180']
