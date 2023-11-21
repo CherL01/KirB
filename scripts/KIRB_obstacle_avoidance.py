@@ -5,7 +5,7 @@ from KIRB_python_arduino import PyArduino
 from KIRB_localization import MazeLocalization
 from KIRB_block_detection import BlockDetection
 
-PA = PyArduino(com_port="COM4")
+PA = PyArduino(com_port="COM7")
 ML = MazeLocalization()
 BD = BlockDetection()
 
@@ -646,4 +646,4 @@ OA.block_detect_and_move()
 # OA.localize_and_navigate('drop off zone', drop_off_loc)
 
 # # drop off block
-# OA.block_drop_off()
+OA.block_drop_off()
