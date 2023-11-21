@@ -596,12 +596,25 @@ class ObstacleAvoidance():
 
                 print('command (pick up): ', command)
                 self.move(command)
-        
 
-        
+    def block_drop_off(self):
+        '''
+        input: self
+        output: None
 
+        Drops block off in drop off location
+        '''
 
+        # drop off zone reached, drop off block
+        print('\ndropping off block...')
+        commands = BD.drop_off_block()
+        for command in commands:
 
+            print('command (drop off): ', command)
+            self.move(command)
+
+        print('dropped off block!')
+        print('complete')
 
 
 drop_off_loc = 'A6'
@@ -614,11 +627,18 @@ OA.initial_navigation()
 # # tries to localize then travel to loading zone
 OA.localize_and_navigate('loading zone')
 
-# # navigates to a localizable square
-# OA.initial_navigation()
+# start block detection
+OA.block_detect_and_move()
 
-ML.initial = False
-ML.localized = True
+# renavigate to a localizable square
+OA.initial_navigation()
+
+# # milestone 2
+# ML.initial = False
+# ML.localized = True
 
 # tries to localize then travel to drop off zone
 OA.localize_and_navigate('drop off zone', drop_off_loc)
+
+# drop off block
+OA.block_drop_off()

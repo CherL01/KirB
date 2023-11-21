@@ -78,6 +78,17 @@ class BlockDetection():
         
         # move arm down, open gripper, move forward, close gripper, move arm up
         return ['a180', 'go', 'w0-1', 'gc', 'a-180']
+    
+    def drop_off_block(self):
+        ''' 
+        input: self
+        output: list of commands to drop off block
+        
+        A fine-tuned set of movements to move the arm, drop off the block, and move arm back up.
+        '''
+        
+        # move back 5 inches to give room, move arm down, open gripper, move back, close gripper, move arm up
+        return ['w0--5', 'a180', 'go', 'w0--1', 'gc', 'a-180']
         
         
             
