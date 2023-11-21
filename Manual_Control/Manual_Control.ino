@@ -107,16 +107,12 @@ void setup() {
 
 void loop() {
   delay(100);
-
-  // enables and disables parallel
+  // Always run parallel
   if (Start==true) {
     Parallel();
   } else if (Start==false) {
     DisableMotors();
   }
-
-  // send sensor values to python (even when parallel is off)
-  GetAllSensorReadings(numAvg);
   
   // Read what is transmitted onto arduino from python code
   if (Serial.available()) {
@@ -215,9 +211,9 @@ void InitMotors(void) {
   pinMode(leftMotorIn3, OUTPUT);         
   pinMode(leftMotorIn4, OUTPUT);        
 
-  //Servo motors pins
-  ArmServo.attach(6);
-  GripperServo.attach(7);
+//  //Servo motors pins
+//  ArmServo.attach(6);
+//  GripperServo.attach(7);
 }
 
 void InitInterrupts(void) {
