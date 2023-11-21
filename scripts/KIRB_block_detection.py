@@ -14,6 +14,7 @@ class BlockDetection():
         self.block_detected = False
         
         # initialize the difference limit between the front Top & Bot sensors
+        ### CAN CHANGE
         self.front_sensor_diff_limit = 4
 
         # initialize that block is not within pick up range
@@ -29,7 +30,7 @@ class BlockDetection():
     
     def scan_for_block(self, sensor_dict, direction):
         ''' 
-        input: front sensor reading, bottom sensor reading
+        input: sensor dictionary, current square label
         output: True if block detected (False otherwise), list of movement commands
         
         Slowly rotate (L/R) to scan for the block in the loading zone
@@ -63,9 +64,9 @@ class BlockDetection():
             elif sensor_dict['u6'] < 2:
                 return self.pick_up_range, ['w0--0.5']
             
-            else:
-                self.pick_up_range = True
-                return self.pick_up_range, ['']
+        else:
+            self.pick_up_range = True
+            return self.pick_up_range, ['']
         
     def pick_up_block(self):
         ''' 
