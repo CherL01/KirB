@@ -12,14 +12,14 @@
 #define TRIGGER_PIN4          51    // Right front
 #define TRIGGER_PIN5          52    // Right back
 #define TRIGGER_PIN6          53    // Back
-#define TRIGGER_PIN7          47    // Front bottom  // Doublecheck
+#define TRIGGER_PIN7          43    // Front bottom  // Doublecheck
 #define ECHO_PIN1             8     // Front sensor
 #define ECHO_PIN2             9     // Left front
 #define ECHO_PIN3             10    // Left back
 #define ECHO_PIN4             11    // Right front
 #define ECHO_PIN5             12    // Right back
 #define ECHO_PIN6             13    // Back
-#define ECHO_PIN7             7     // Front bottom  // Doublecheck
+#define ECHO_PIN7             6     // Front bottom  // Doublecheck
 #define MaxDistance           200
 
 NewPing sonar1(TRIGGER_PIN1, ECHO_PIN1, MaxDistance);

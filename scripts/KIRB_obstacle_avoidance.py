@@ -5,7 +5,7 @@ from KIRB_python_arduino import PyArduino
 from KIRB_localization import MazeLocalization
 from KIRB_block_detection import BlockDetection
 
-PA = PyArduino(com_port="COM7")
+PA = PyArduino(com_port="COM4")
 ML = MazeLocalization()
 BD = BlockDetection()
 
@@ -43,6 +43,7 @@ class ObstacleAvoidance():
         self.e_stop_limit = 1.18
         self.square_dim = 12
         self.forward_limit = 2.8
+        self.loading_zone_path = None
 
     def detect_wall(self, reading):
         '''
@@ -120,7 +121,7 @@ class ObstacleAvoidance():
             # get message from buffer
             message = PA.blocking_read()
 
-            # print('message: ', message)
+            print('message: ', message)
             
             try:
                 # print('message split: ', message.split('|')[1:8])
@@ -533,11 +534,13 @@ class ObstacleAvoidance():
             # get sensor readings and current square in loading zone
             sensor_list = self.get_sensor_readings()
             current_square = self.loading_zone_path[-1]
+            print('sensor list: ', sensor_list)
+            print('currnet square: ', current_square)
 
             # if current square is B1, start by scanning right
             if current_square == 'B1':
 
-                if sensor_list[3] < 20:
+                if sensor_list[3] < 35:
                     direction = 'R'
 
                 # if right sensor reads more than 20, scan left
@@ -547,7 +550,7 @@ class ObstacleAvoidance():
             # if current square is A2, start by scanning left
             elif current_square == 'A2':
 
-                if sensor_list[1] < 20:
+                if sensor_list[1] < 35:
                     direction = 'L'
 
                 # if left sensor reads more than 20, scan right
@@ -555,6 +558,7 @@ class ObstacleAvoidance():
                     direction = 'R'
 
             # run block detection
+            print('direction: ', direction)
             detected, commands = BD.scan_for_block(self.sensor_label2reading_dict, direction)
 
             # if block detected, move to next stage
@@ -594,8 +598,8 @@ class ObstacleAvoidance():
 
         for command in commands:
 
-                print('command (pick up): ', command)
-                self.move(command)
+            print('command (pick up): ', command)
+            self.move(command)
 
     def block_drop_off(self):
         '''
@@ -617,28 +621,29 @@ class ObstacleAvoidance():
         print('complete')
 
 
-drop_off_loc = 'A6'
+# drop_off_loc = 'A6'
 
 OA = ObstacleAvoidance()
 
-# # navigates to a localizable square
-OA.initial_navigation()
+# # # navigates to a localizable square
+# OA.initial_navigation()
 
-# # tries to localize then travel to loading zone
-OA.localize_and_navigate('loading zone')
+# # # tries to localize then travel to loading zone
+# OA.localize_and_navigate('loading zone')
 
 # start block detection
+OA.loading_zone_path = ['A2']
 OA.block_detect_and_move()
 
-# renavigate to a localizable square
-OA.initial_navigation()
+# # renavigate to a localizable square
+# OA.initial_navigation()
 
 # # milestone 2
 # ML.initial = False
 # ML.localized = True
 
-# tries to localize then travel to drop off zone
-OA.localize_and_navigate('drop off zone', drop_off_loc)
+# # tries to localize then travel to drop off zone
+# OA.localize_and_navigate('drop off zone', drop_off_loc)
 
-# drop off block
-OA.block_drop_off()
+# # drop off block
+# OA.block_drop_off()

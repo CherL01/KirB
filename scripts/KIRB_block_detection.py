@@ -1,10 +1,6 @@
 import math
 import time
 
-from KIRB_python_arduino import PyArduino
-
-
-
 class BlockDetection():
 
     # initialize
@@ -42,7 +38,7 @@ class BlockDetection():
             self.block_detected = True
             return self.block_detected, ['']
         
-        # rotate left until it detects a block
+        # rotate until it detects a block
         else:
             if direction == 'L':
                 return self.block_detected, ['r0--5']
@@ -89,13 +85,3 @@ class BlockDetection():
         
         # move back 5 inches to give room, move arm down, open gripper, move back, close gripper, move arm up
         return ['w0--5', 'a180', 'go', 'w0--1', 'gc', 'a-180']
-        
-        
-            
-        
-        
-        
-        
-        
-        
-        
