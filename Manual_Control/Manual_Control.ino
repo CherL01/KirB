@@ -440,9 +440,9 @@ void Parallel(void) {
   }
 
   // both sides over the sensor difference limit (not parallel)
-  if (L_sensor_diff > sensorDifferenceLimit && R_sensor_diff > sensorDifferenceLimit) {
+  if !(L_sensor_diff < sensorDifferenceLimit && R_sensor_diff < sensorDifferenceLimit) {
     if (closestSensorIndex == 1) {
-      Rotate(6);
+      Rotate(6);                                                                                                                                                                                                                                                                                   
     } else if (closestSensorIndex == 2) {
       Rotate(-6);
     } else if (closestSensorIndex == 3) {
