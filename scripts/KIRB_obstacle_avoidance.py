@@ -302,82 +302,82 @@ class ObstacleAvoidance():
         # find difference between right sensors
         self.right_sensor_difference = abs(self.sensor_label2reading_dict['u3'] - self.sensor_label2reading_dict['u4'])
 
-    # def parallel(self, initial=False):
-    #     '''
-    #     input: self
-    #     return: False if emergency stop activated, True otherwise
-    #     '''
-    #     print('\nrunning parallel!')
-    #     # print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
+    def parallel(self, initial=False):
+        '''
+        input: self
+        return: False if emergency stop activated, True otherwise
+        '''
+        print('\nrunning parallel!')
+        # print('sensor reading dict (in parallel): ', self.sensor_label2reading_dict)
 
-    #     _ = self.get_sensor_readings()
-    #     self.sensor_diff()
+        _ = self.get_sensor_readings()
+        self.sensor_diff()
         
-    #     closest_sensor, _ = self.get_closest()
-    #     print('closest sensor: ', closest_sensor)
+        closest_sensor, _ = self.get_closest()
+        print('closest sensor: ', closest_sensor)
 
-    #     print('left sensor diff: ', self.left_sensor_difference)
-    #     print('right sensor diff: ', self.right_sensor_difference)
+        print('left sensor diff: ', self.left_sensor_difference)
+        print('right sensor diff: ', self.right_sensor_difference)
         
-    #     #########
-    #     #check left & right side difference to centre itself
+        #########
+        #check left & right side difference to centre itself
         
-    #     l_sense = (self.sensor_label2reading_dict['u1']+self.sensor_label2reading_dict['u2'])/2
-    #     r_sense = (self.sensor_label2reading_dict['u3']+self.sensor_label2reading_dict['u4'])/2
-    #     #case when KIRB is in hallway
-    #     if (l_sense + r_sense) < 10:
-    #         print('in a hallway!')
+        l_sense = (self.sensor_label2reading_dict['u1']+self.sensor_label2reading_dict['u2'])/2
+        r_sense = (self.sensor_label2reading_dict['u3']+self.sensor_label2reading_dict['u4'])/2
+        #case when KIRB is in hallway
+        if (l_sense + r_sense) < 10:
+            print('in a hallway!')
             
-    #         #when left is more open
-    #         if l_sense > r_sense + 2:
-    #             print('moving to left of hallway')
-    #             self.move('r0--6')
+            #when left is more open
+            if l_sense > r_sense + 2:
+                print('moving to left of hallway')
+                self.move('r0--6')
             
-    #         #when right is more open
-    #         if r_sense > l_sense + 2:
-    #             print('moving to right of hallway')
-    #             self.move('r0-6')
+            #when right is more open
+            if r_sense > l_sense + 2:
+                print('moving to right of hallway')
+                self.move('r0-6')
                 
-    #     #############
+        #############
                 
-    #     # both sides are over sensor difference limit (not parallel)
-    #     if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
+        # both sides are over sensor difference limit (not parallel)
+        if self.left_sensor_difference > self.sensor_difference_limit and self.right_sensor_difference > self.sensor_difference_limit:
             
-    #         print("Both sides over sensor limit")
+            print("Both sides over sensor limit")
 
-    #         # CONDITION #1: 45deg placement
-    #         # TURN 4 DEG WHEN NOT ALIGNED
-    #         # front left is closest
-    #         if closest_sensor == 'u1':
-    #             print('front left closest: moving right')
-    #             self.move('r0-6')
+            # CONDITION #1: 45deg placement
+            # TURN 4 DEG WHEN NOT ALIGNED
+            # front left is closest
+            if closest_sensor == 'u1':
+                print('front left closest: moving right')
+                self.move('r0-6')
         
-    #         # back left is closest
-    #         elif closest_sensor == 'u2':
-    #             print('back left closest: moving left')
-    #             self.move('r0--6')
+            # back left is closest
+            elif closest_sensor == 'u2':
+                print('back left closest: moving left')
+                self.move('r0--6')
 
-    #         # front right is closest
-    #         elif closest_sensor == 'u3':
-    #             print('front right closest: moving left')
-    #             self.move('r0--6')
+            # front right is closest
+            elif closest_sensor == 'u3':
+                print('front right closest: moving left')
+                self.move('r0--6')
 
-    #         # back right is closest
-    #         elif closest_sensor == 'u4':
-    #             print('back right closest: moving right')
-    #             self.move('r0-6')
+            # back right is closest
+            elif closest_sensor == 'u4':
+                print('back right closest: moving right')
+                self.move('r0-6')
                 
-    #     if (self.avg_sensor_reading('L') < self.e_stop_limit) or (self.avg_sensor_reading('R') < self.e_stop_limit):
-    #         print('OOPS too close to a wall :(')
-    #         self.check_turn_clearance()
+        if (self.avg_sensor_reading('L') < self.e_stop_limit) or (self.avg_sensor_reading('R') < self.e_stop_limit):
+            print('OOPS too close to a wall :(')
+            self.check_turn_clearance()
 
-    #     if initial is True:
-    #         print('WHERE AM I? I HAVE TO FIND MYSELF! "Just keep swimming :)"')
-    #         # if there is room in front, travel forward one inch
-    #         if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
-    #             self.move('w0-4')  
-    #         else:
-    #             self.move('w0--2')
+        if initial is True:
+            print('WHERE AM I? I HAVE TO FIND MYSELF! "Just keep swimming :)"')
+            # if there is room in front, travel forward one inch
+            if self.sensor_label2reading_dict['u0'] >= self.forward_limit:
+                self.move('w0-4')  
+            else:
+                self.move('w0--2')
 
     def initial_navigation(self):
         '''
@@ -419,6 +419,12 @@ class ObstacleAvoidance():
 
         # run localization in initial square 
         while ML.initial is True:
+
+            # check wall locations, turn off parallel if at 3 or 4 way intersection
+            wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
+            if sum(wall_locs) <= 1:
+                self.move('x')
+                self.parallel()
 
             # if in D1, W:
             if (sensors_list[1] < ML.wall_limit) and (sensors_list[2] > 42): # and (sensors_list[3] > 30)

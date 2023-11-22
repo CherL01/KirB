@@ -1,10 +1,16 @@
 #include <util/atomic.h> // For the ATOMIC_BLOCK macro
 
-#define ENCA 2 // YELLOW
-#define ENCB 22 // WHITE
-#define PWM 4
-#define IN2 31
-#define IN1 30
+//#define ENCA 2 // YELLOW
+//#define ENCB 22 // WHITE
+//#define PWM 4
+//#define IN2 31
+//#define IN1 30
+
+#define ENCA 3 // YELLOW
+#define ENCB 23 // WHITE
+#define PWM 5
+#define IN2 32
+#define IN1 33
 
 volatile int posi = 0; // specify posi as volatile: https://www.arduino.cc/reference/en/language/variables/variable-scope-qualifiers/volatile/
 long prevT = 0;
@@ -27,13 +33,18 @@ void setup() {
 void loop() {
 
   // set target position
-  //int target = 1200;
-  int target = 250*sin(prevT/1e6);
+  int target = 1200;
+//  int target = 250*sin(prevT/1e6);
 
   // PID constants
+  // right wheel
+//  float kp = 1;
+//  float kd = 0.1;
+//  float ki = -0.078;
+
   float kp = 1;
-  float kd = 0.025;
-  float ki = 0.0;
+  float kd = 0.1;
+  float ki = -0.045;
 
   // time difference
   long currT = micros();

@@ -228,9 +228,6 @@ class MazeLocalization():
         '''
 
         return math.exp( -((mu - x) ** 2) / (sigma ** 2) / 2.) / math.sqrt( 2. * math.pi * (sigma ** 2)) 
-        # denom = (2*math.pi*sigma)**.5
-        # num = math.exp(-(float(x)-float(mu))**2/(2*sigma))
-        # return num/denom
 
     def square_prob(self, sensor_readings, square_heading_pairs):
         '''
