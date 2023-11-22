@@ -239,7 +239,7 @@ class ObstacleAvoidance():
                 self.move('x')  # turn off parallel
                 self.move('r0--15')
                 self.move('w0--1')
-                self.move('r0-10')
+                self.move('r0-12')
                 self.move('w0-1')
                 # self.move('s')  # turn on parallel
                 # # self.parallel()
@@ -247,7 +247,7 @@ class ObstacleAvoidance():
                 self.move('x')  # turn off parallel
                 self.move('r0-15')
                 self.move('w0--1')
-                self.move('r0--10')
+                self.move('r0--12')
                 self.move('w0-1')
                 # self.move('s')  # turn on parallel
                 # # self.parallel()

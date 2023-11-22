@@ -150,7 +150,7 @@ class MazeLocalization():
         '''
         
         # set up potential movement directions and theoretical values list
-        movement_directon = ['F', 'L', 'R', 'B']
+        movement_directon = ['F', 'L', 'B', 'R']
         theoretical_values = []
 
         # recursively find theoretical sensor readings for each movement direction
@@ -227,10 +227,10 @@ class MazeLocalization():
         output: probability of x for 1-dim Gaussian with mean mu and var sigma
         '''
 
-        # return math.exp( -((mu - x) ** 2) / (sigma ** 2) / 2.) / math.sqrt( 2. * math.pi * (sigma ** 2)) 
-        denom = (2*math.pi*sigma)**.5
-        num = math.exp(-(float(x)-float(mu))**2/(2*sigma))
-        return num/denom
+        return math.exp( -((mu - x) ** 2) / (sigma ** 2) / 2.) / math.sqrt( 2. * math.pi * (sigma ** 2)) 
+        # denom = (2*math.pi*sigma)**.5
+        # num = math.exp(-(float(x)-float(mu))**2/(2*sigma))
+        # return num/denom
 
     def square_prob(self, sensor_readings, square_heading_pairs):
         '''
