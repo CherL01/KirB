@@ -475,7 +475,7 @@ void OpenGripper(void) {
 void CloseGripper(void) {
   // this only sets the speed. To stop, use GripperServo.write(90)
   //To close
-  //GripperServo.write();     // calibrate
-  delay(2000);              // calibrate
+  GripperServo.write(115);     // close
+  delay(2000);              // closed?
   GripperServo.write(90);   // might not need to stop, keep "closing" to hold grip
 }
