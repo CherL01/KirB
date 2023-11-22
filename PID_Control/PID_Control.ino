@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <NewPing.h>
 #include <Servo.h>
+#include <util/atomic.h> // For the ATOMIC_BLOCK macro
 
 //Define pins
 //SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
@@ -103,8 +104,14 @@ struct motor_params {
   float pwr;
 }
 
-volatile int posiR = 0; // volatile position since interrupt
-volatile int posiL = 0; 
+volatile long posiR = 0; // volatile position since interrupt
+volatile long posiL = 0; 
+
+PID_params right_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
+PID_params left_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
+
+long targetL = 0; // positive = forward
+long targetR = 0; // negative = forward
 
 void setup() {
   // Initialize motors
@@ -229,9 +236,6 @@ void InitMotors(void) {
   pinMode(rightMotorIn2, OUTPUT);        
   pinMode(leftMotorIn3, OUTPUT);         
   pinMode(leftMotorIn4, OUTPUT);        
-
-  PID_params right_motor_PID_params = {1.0, 0.1, -0.078, 0, 0, 0};
-  PID_params left_motor_PID_params = {1.0, 0.1, -0.045, 0, 0, 0};
 //  //Servo motors pins
   ArmServo.attach(45);        // needs pwm pins
 //  GripperServo.attach(46);    // needs pwm pins
@@ -273,7 +277,7 @@ void readEncoderL(){
   }
 }
 
-PID_params calc_PID(int pos, int target, PID_params &params){
+motor_params calc_PID(int pos, int target, PID_params &params){
   motor_params out;
 
   long currT = micros();
@@ -305,7 +309,7 @@ PID_params calc_PID(int pos, int target, PID_params &params){
   }
   
   out.dir = dir;
-  out.pwr = pwr
+  out.pwr = pwr;
   
   return out;
 }
@@ -405,6 +409,24 @@ int Rotate(float rotDegrees) {
   delay(10);
   //DisableMotors();
 }
+
+void setMotor(int dir, int pwmVal, int pwm, int in1, int in2){
+  analogWrite(pwm,pwmVal);
+  if(dir == 1){
+    digitalWrite(in1,HIGH);
+    digitalWrite(in2,LOW);
+  }
+  else if(dir == -1){
+    digitalWrite(in1,LOW);
+    digitalWrite(in2,HIGH);
+  }
+  else{
+    digitalWrite(in1,LOW);
+    digitalWrite(in2,LOW);
+  }  
+}
+
+
 
 void LeftMotorForward(void) {
   // left motor rotates forward
