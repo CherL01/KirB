@@ -5,7 +5,7 @@ from KIRB_python_arduino import PyArduino
 from KIRB_localization import MazeLocalization
 from KIRB_block_detection import BlockDetection
 
-PA = PyArduino(com_port="COM7")
+PA = PyArduino(com_port="COM4")
 ML = MazeLocalization()
 BD = BlockDetection()
 
@@ -121,7 +121,7 @@ class ObstacleAvoidance():
             # get message from buffer
             message = PA.blocking_read()
 
-            print('message: ', message)
+            # print('message: ', message)
             
             try:
                 # print('message split: ', message.split('|')[1:8])
@@ -182,6 +182,7 @@ class ObstacleAvoidance():
         input: self
         output: True if there is clearance
         '''
+
         cleared = False
         front_turn_limit = 2.0
         sides_turn_limit = 2.76
@@ -201,6 +202,7 @@ class ObstacleAvoidance():
                 front_turn_limit = 38.5
         
         while sensor_list[0] < front_turn_limit or sensor_list[2] < self.e_stop_limit:
+
             print('\nnot enough clearance')
             
             print('front back turn limit: ', front_turn_limit)
@@ -237,17 +239,17 @@ class ObstacleAvoidance():
                 self.move('x')  # turn off parallel
                 self.move('r0--15')
                 self.move('w0--1')
-                self.move('r0-13')
+                self.move('r0-10')
                 self.move('w0-1')
-                self.move('s')  # turn on parallel
+                # self.move('s')  # turn on parallel
                 # # self.parallel()
             elif sensor_list[3] < sides_turn_limit:
                 self.move('x')  # turn off parallel
                 self.move('r0-15')
                 self.move('w0--1')
-                self.move('r0--13')
+                self.move('r0--10')
                 self.move('w0-1')
-                self.move('s')  # turn on parallel
+                # self.move('s')  # turn on parallel
                 # # self.parallel()
             
             sensor_list = self.get_sensor_readings()
@@ -268,6 +270,9 @@ class ObstacleAvoidance():
                     
         cleared = True     
         print('cleared: ', cleared)
+
+        # start parallel
+        self.move('s')
         
         return cleared
 
@@ -382,6 +387,10 @@ class ObstacleAvoidance():
         runs until initial navigation is completed
         '''
 
+        # move arm up
+        print('moving arm up...')
+        self.move('a180')
+
         # travels through the maze purely on obstale avoidance until robot is in a localizable square
         print('\nstart parallel')
         self.move('start')
@@ -418,10 +427,14 @@ class ObstacleAvoidance():
                 print('changed sensor list: ', sensors_list)
 
             # if in D1, S:
-            if (sensors_list[3] < ML.wall_limit) and (sensors_list[2] > 35) and (sensors_list[1] > 30): # and (sensors_list[2] < 42):
-                print('in D1 (S), changed left sensor value')
-                sensors_list[1] = 60
-                print('changed sensor list: ', sensors_list)
+            elif (sensors_list[3] < ML.wall_limit) and (sensors_list[2] > 35) and (sensors_list[1] > 30): # and (sensors_list[2] < 42):
+                if ML.loading_zone is False:
+                    print('in D1 (S), changed left sensor value')
+                    sensors_list[1] = 60
+                    print('changed sensor list: ', sensors_list)
+
+                elif ML.loading_zone is True:
+                    print('in A1 (W), did not change sensor values')
 
             # if in D6, S OR A1, N:
             elif (sensors_list[1] < ML.wall_limit) and (36 < sensors_list[2] < 42) and (sensors_list[3] > 37):
@@ -431,7 +444,7 @@ class ObstacleAvoidance():
                     print('changed sensor list: ', sensors_list)
 
                 elif ML.loading_zone is True:
-                    print(' in A1 (N), did not change sensor values')
+                    print('in A1 (N), did not change sensor values')
 
             # if in D6, E:
             elif (sensors_list[3] < ML.wall_limit) and (sensors_list[1] > 26) and (sensors_list[2] > 30):
@@ -625,29 +638,29 @@ class ObstacleAvoidance():
         print('complete')
 
 
-# drop_off_loc = 'A6'
+drop_off_loc = 'A6'
 
 OA = ObstacleAvoidance()
 
-# # # navigates to a localizable square
-# OA.initial_navigation()
+# # navigates to a localizable square
+OA.initial_navigation()
 
-# # # tries to localize then travel to loading zone
-# OA.localize_and_navigate('loading zone')
+# # tries to localize then travel to loading zone
+OA.localize_and_navigate('loading zone')
 
 # start block detection
 OA.loading_zone_path = ['A2']
 OA.block_detect_and_move()
 
-# # renavigate to a localizable square
-# OA.initial_navigation()
+# renavigate to a localizable square
+OA.initial_navigation()
 
 # # milestone 2
 # ML.initial = False
 # ML.localized = True
 
-# # tries to localize then travel to drop off zone
-# OA.localize_and_navigate('drop off zone', drop_off_loc)
+# tries to localize then travel to drop off zone
+OA.localize_and_navigate('drop off zone', drop_off_loc)
 
 # # drop off block
 OA.block_drop_off()

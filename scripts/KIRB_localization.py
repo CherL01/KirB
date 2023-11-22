@@ -52,10 +52,10 @@ class MazeLocalization():
         self.sensor_tolerance = 2
 
         # limit for wall detection
-        self.wall_limit = 4
+        self.wall_limit = 4.5
 
         # sensor noise
-        self.sensor_noise = 10
+        self.sensor_noise = 5
 
         # probability threshold (diff between highest and second highest prob for robot to be considered localized)
         self.prob_threshold = 0.6
@@ -150,7 +150,7 @@ class MazeLocalization():
         '''
         
         # set up potential movement directions and theoretical values list
-        movement_directon = ['F', 'L', 'B', 'R']
+        movement_directon = ['F', 'L', 'R', 'B']
         theoretical_values = []
 
         # recursively find theoretical sensor readings for each movement direction
@@ -227,7 +227,10 @@ class MazeLocalization():
         output: probability of x for 1-dim Gaussian with mean mu and var sigma
         '''
 
-        return math.exp( -((mu - x) ** 2) / (sigma ** 2) / 2.) / math.sqrt( 2. * math.pi * (sigma ** 2)) 
+        # return math.exp( -((mu - x) ** 2) / (sigma ** 2) / 2.) / math.sqrt( 2. * math.pi * (sigma ** 2)) 
+        denom = (2*math.pi*sigma)**.5
+        num = math.exp(-(float(x)-float(mu))**2/(2*sigma))
+        return num/denom
 
     def square_prob(self, sensor_readings, square_heading_pairs):
         '''
@@ -240,6 +243,7 @@ class MazeLocalization():
         # calculate gaussian probability for each potential square
         for square, heading in square_heading_pairs:
             t_values = self.theoretical_sensor_readings(square, heading)
+            print('theoretical values - square: ', square, t_values)
             w = 1.
             for t, s in zip(t_values, sensor_readings):
                 w *= self.gaussian_prob(t, self.sensor_noise, s)
