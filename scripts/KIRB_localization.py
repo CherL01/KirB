@@ -240,7 +240,7 @@ class MazeLocalization():
         # calculate gaussian probability for each potential square
         for square, heading in square_heading_pairs:
             t_values = self.theoretical_sensor_readings(square, heading)
-            print('theoretical values - square: ', square, t_values)
+            # print('theoretical values - square: ', square, t_values)
             w = 1.
             for t, s in zip(t_values, sensor_readings):
                 w *= self.gaussian_prob(t, self.sensor_noise, s)

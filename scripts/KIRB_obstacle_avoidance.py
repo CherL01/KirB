@@ -101,7 +101,6 @@ class ObstacleAvoidance():
             if abs(s1 - s2) > ML.wall_limit:
                 return max(s1, s2)
 
-        
         average = (s1 + s2) / 2
             
         return average
@@ -116,6 +115,7 @@ class ObstacleAvoidance():
         '''
 
         # split sensor readings and store in init variables
+        # time.sleep(5)
         for _ in range(3):
             
             # get message from buffer
@@ -423,6 +423,7 @@ class ObstacleAvoidance():
             # check wall locations, turn off parallel if at 3 or 4 way intersection
             wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
             if sum(wall_locs) <= 1:
+                print('3/4-way intersection, stop parallel')
                 self.move('x')
                 self.parallel()
 
@@ -462,6 +463,10 @@ class ObstacleAvoidance():
                 
             if command_loc == ['']:
                 print('initial localization done!')
+
+                # start parallel
+                print('restarting parallel')
+                self.move('s')
                 break
 
             command_ard = self.convert_command(command_loc[0])
@@ -477,10 +482,25 @@ class ObstacleAvoidance():
                 
             if command_loc != ['RT']:
                 print('initial localization done!')
+
+                # start parallel
+                print('restarting parallel')
+                self.move('s')
+
                 break
         
         # loops until localization is fully complete
         while ML.localized is False:
+
+            sensors_list = self.get_sensor_readings()
+
+            # check wall locations, turn off parallel if at 3 or 4 way intersection
+            wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
+            if sum(wall_locs) <= 1:
+                print('3/4-way intersection, stop parallel')
+                self.move('x')
+                self.parallel()
+
             localized, _, command_loc = ML.localize(sensors_list)
             print('localized: ', localized)
 
@@ -493,7 +513,9 @@ class ObstacleAvoidance():
                 self.move(command)
                 # self.parallel()
 
-            sensors_list = self.get_sensor_readings()
+            # start parallel
+            print('start parallel')
+            self.move('s')
 
         # navigate to loading zone
         if zone == 'loading zone':
@@ -504,12 +526,26 @@ class ObstacleAvoidance():
             # get square, heading, and navigation command
             for square, (command_nav, heading) in zip(path[1:], movements):
                 print('next square and heading: ', square, heading)
+
+                # start parallel
+                print('start parallel')
+                self.move('s')
+
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
 
                     print('command (during navigation): ', command)
                     self.move(command)
+
+                sensors_list = self.get_sensor_readings()
+
+                # check wall locations, turn off parallel if at 3 or 4 way intersection
+                wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
+                if sum(wall_locs) <= 1:
+                    print('3/4-way intersection, stop parallel')
+                    self.move('x')
+                    self.parallel()
 
             print('reached localization zone!')
             self.move('led1')
@@ -524,12 +560,26 @@ class ObstacleAvoidance():
             # get square, heading, and navigation command
             for square, (command_nav, heading) in zip(path[1:], movements):
                 print('next square and heading: ', square, heading)
+
+                # start parallel
+                print('start parallel')
+                self.move('s')
+
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
 
                     print('command (during navigation): ', command)
                     self.move(command)
+
+                sensors_list = self.get_sensor_readings()
+
+                # check wall locations, turn off parallel if at 3 or 4 way intersection
+                wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
+                if sum(wall_locs) <= 1:
+                    print('3/4-way intersection, stop parallel')
+                    self.move('x')
+                    self.parallel()
 
             print('reached drop off zone!')
             self.move('led2')
