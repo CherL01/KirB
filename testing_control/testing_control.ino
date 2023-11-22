@@ -33,22 +33,23 @@ struct PID_params {
   float eprev; // default 0
   float eintegral; // default 0
   long prevT; // default 0
-}
+};
 
 struct motor_params {
   int dir;
   float pwr;
-}
+};
 
 volatile int posiR = 0; // specify posi as volatile: https://www.arduino.cc/reference/en/language/variables/variable-scope-qualifiers/volatile/
 volatile int posiL = 0; // specify posi as volatile: https://www.arduino.cc/reference/en/language/variables/variable-scope-qualifiers/volatile/
+  
+PID_params right_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
+PID_params left_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
 
+int target = 0;
 
 void setup() {
   Serial.begin(9600);
-
-  PID_params right_motor_PID_params = {1.0, 0.1, -0.078, 0, 0, 0};
-  PID_params left_motor_PID_params = {1.0, 0.1, -0.045, 0, 0, 0};
 
   pinMode(rightEncA,INPUT);
   pinMode(rightEncB,INPUT);
@@ -72,9 +73,8 @@ void setup() {
 void loop() {
 
   // set target position
-  int target = 1200;
 //  int target = 250*sin(prevT/1e6);
-
+  target += 10;
   // PID constants
   // right wheel
 //  float kp = 1;
@@ -85,10 +85,6 @@ void loop() {
   // float kd = 0.1;
   // float ki = -0.045;
 
-  // time difference
-  long currT = micros();
-  float deltaT = ((float) (currT - prevT))/( 1.0e6 );
-  prevT = currT;
 
   // Read the position in an atomic block to avoid a potential
   // misread if the interrupt coincides with this code running
@@ -105,22 +101,25 @@ void loop() {
 
   motor_params right_motor;
   motor_params left_motor;
-  right_motor = calc_PID(posR, target, right_motor_PID_params)
-  left_motor = calc_PID(posL, target, left_motor_PID_params)
+  right_motor = calc_PID(posR, target*-1, right_motor_PID_params);
+  left_motor = calc_PID(posL, target, left_motor_PID_params);
 
   // signal the motor
   setMotor(right_motor.dir,right_motor.pwr,rightMotorPin,rightMotorIn1,rightMotorIn2);
   setMotor(left_motor.dir,left_motor.pwr,leftMotorPin,leftMotorIn1,leftMotorIn2);
 
+  Serial.print("target:");
   Serial.print(target);
   Serial.print(" ");
-  Serial.print(posR);
+  Serial.print("posR:");
+  Serial.print(posR*-1);
   Serial.print(" ");
+  Serial.print("posL:");
   Serial.print(posL);
   Serial.println();
 }
 
-PID_params calc_PID(int pos, int target, PID_params &params){
+motor_params calc_PID(int pos, int target, PID_params &params){
   motor_params out;
 
   long currT = micros();
@@ -152,7 +151,7 @@ PID_params calc_PID(int pos, int target, PID_params &params){
   }
   
   out.dir = dir;
-  out.pwr = pwr
+  out.pwr = pwr;
   
   return out;
 }
