@@ -423,6 +423,7 @@ class ObstacleAvoidance():
             # check wall locations, turn off parallel if at 3 or 4 way intersection
             wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
             if sum(wall_locs) <= 1:
+                print('3/4-way intersection, stop parallel')
                 self.move('x')
                 self.parallel()
 
@@ -462,6 +463,10 @@ class ObstacleAvoidance():
                 
             if command_loc == ['']:
                 print('initial localization done!')
+
+                # start parallel
+                print('restarting parallel')
+                self.move('s')
                 break
 
             command_ard = self.convert_command(command_loc[0])
@@ -481,6 +486,16 @@ class ObstacleAvoidance():
         
         # loops until localization is fully complete
         while ML.localized is False:
+
+            sensors_list = self.get_sensor_readings()
+
+            # check wall locations, turn off parallel if at 3 or 4 way intersection
+            wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
+            if sum(wall_locs) <= 1:
+                print('3/4-way intersection, stop parallel')
+                self.move('x')
+                self.parallel()
+
             localized, _, command_loc = ML.localize(sensors_list)
             print('localized: ', localized)
 
@@ -493,7 +508,9 @@ class ObstacleAvoidance():
                 self.move(command)
                 # self.parallel()
 
-            sensors_list = self.get_sensor_readings()
+            # start parallel
+            print('start parallel')
+            self.move('s')
 
         # navigate to loading zone
         if zone == 'loading zone':
