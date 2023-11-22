@@ -52,10 +52,10 @@ class MazeLocalization():
         self.sensor_tolerance = 2
 
         # limit for wall detection
-        self.wall_limit = 4
+        self.wall_limit = 4.5
 
         # sensor noise
-        self.sensor_noise = 10
+        self.sensor_noise = 5
 
         # probability threshold (diff between highest and second highest prob for robot to be considered localized)
         self.prob_threshold = 0.6
@@ -240,6 +240,7 @@ class MazeLocalization():
         # calculate gaussian probability for each potential square
         for square, heading in square_heading_pairs:
             t_values = self.theoretical_sensor_readings(square, heading)
+            # print('theoretical values - square: ', square, t_values)
             w = 1.
             for t, s in zip(t_values, sensor_readings):
                 w *= self.gaussian_prob(t, self.sensor_noise, s)
