@@ -73,23 +73,24 @@ void RightMotorBackward(void);
 int LmotorSpeed = 95;
 int RmotorSpeed = 110;
 String cmdStr;
-volatile long leftMotorCount = 0;
-volatile long rightMotorCount = 0;
+// volatile long posiL = 0;
+// volatile long posiR = 0;
 
 // Define motor connections
 int leftMotorPin = 5;       // L DC Motor - interrupt pin (might not need it tho idk)
 int rightMotorPin = 4;      // R DC Motor - interrupt pin
 
-int rightMotorIn1 = 30;       // R DC Motor - IN1 on Motor Driver
-int rightMotorIn2 = 31;       // R DC Motor - IN2 on Motor Driver
-int leftMotorIn2 = 32;      // L DC Motor - IN3 on Motor Driver
-int leftMotorIn1 = 33;      // L DC Motor - IN4 on Motor Driver
+int rightMotorIn1 = 30;       // R DC Motor - IN1 on Motor Driver - green en1
+int rightMotorIn2 = 31;       // R DC Motor - IN2 on Motor Driver - black en2
+int leftMotorIn1 = 32;      // L DC Motor - IN3 on Motor Driver - orange en3
+int leftMotorIn2 = 33;      // L DC Motor - IN4 on Motor Driver - purple en4
 
 int rightEncA = 2;           // R DC Motor - encoder A signal (needs interrupt)
 int rightEncB = 22;          // R DC Motor - encoder B signal
 int leftEncA = 3;          // L DC Motor - encoder A signal (needs interrupt)
 int leftEncB = 23;         // L DC Motor - encoder B signal
 
+// Define PID control parameters, motor parameters, and PID variables
 struct PID_params {
   float kp;
   float kd;
@@ -97,12 +98,12 @@ struct PID_params {
   float eprev; // default 0
   float eintegral; // default 0
   long prevT; // default 0
-}
+} ;
 
 struct motor_params {
   int dir;
   float pwr;
-}
+} ;
 
 volatile long posiR = 0; // volatile position since interrupt
 volatile long posiL = 0; 
@@ -112,6 +113,9 @@ PID_params left_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
 
 long targetL = 0; // positive = forward
 long targetR = 0; // negative = forward
+
+void RunPID(float L_enc_change, float R_enc_change);
+int increment = 50;
 
 void setup() {
   // Initialize motors
@@ -156,6 +160,7 @@ void loop() {
     } else if (cmdStr.charAt(0) == 'r') {
       // Rotates depending on number of degrees sent
       cmdStr.remove(0,3);
+      CheckTurnClearance();
       Rotate(cmdStr.toFloat());
       GetAllSensorReadings(numAvg);
       
@@ -163,8 +168,8 @@ void loop() {
       // Check which ultrasonic sensor we want to read from
       int numAvg = 1;       // # of times it reads the sensors
       cmdStr.remove(0,1);   // remove first char u to determine which sensor to read from
-      leftMotorCount = 0;
-      rightMotorCount = 0;
+      posiL = 0;
+      posiR = 0;
       
       if (cmdStr.charAt(0) == 'a') {
         GetAllSensorReadings(numAvg);
@@ -215,9 +220,9 @@ void loop() {
   // display encoder values (for manual control only)
 //  delay(300);
 //  Serial.print("Left | Right - motor count: ");
-//  Serial.print(leftMotorCount);
+//  Serial.print(posiL);
 //  Serial.print(" | ");
-//  Serial.println(rightMotorCount);
+//  Serial.println(posiR);
   
 }
 
@@ -234,8 +239,8 @@ void InitMotors(void) {
   
   pinMode(rightMotorIn1, OUTPUT);       
   pinMode(rightMotorIn2, OUTPUT);        
-  pinMode(leftMotorIn3, OUTPUT);         
-  pinMode(leftMotorIn4, OUTPUT);        
+  pinMode(leftMotorIn1, OUTPUT);         
+  pinMode(leftMotorIn2, OUTPUT);        
 //  //Servo motors pins
   ArmServo.attach(45);        // needs pwm pins
 //  GripperServo.attach(46);    // needs pwm pins
@@ -253,8 +258,8 @@ void InitInterrupts(void) {
 void DisableMotors(void) {
   digitalWrite(rightMotorIn1, LOW);
   digitalWrite(rightMotorIn2, LOW);
-  digitalWrite(leftMotorIn3, LOW);
-  digitalWrite(leftMotorIn4, LOW);
+  digitalWrite(leftMotorIn1, LOW);
+  digitalWrite(leftMotorIn2, LOW);
 }
 
 void readEncoderR(){
@@ -356,24 +361,26 @@ int GetAllSensorReadings(float numAvg) {
 
 int MoveForward(float movInches) {
   // Calculate the distance in terms of encoder values, and once encoder value is reached must stop
-  float L_encoderChange = int(movInches*L_encValPerInch);
-  float R_encoderChange = int(movInches*R_encValPerInch);
-  int prev_leftMotorCount = leftMotorCount;
-  int prev_rightMotorCount = rightMotorCount;
+  float L_encoderChange = int(movInches*L_encValPerInch); // positive
+  float R_encoderChange = int(movInches*R_encValPerInch); // positive
+  int prev_posiL = posiL;
+  int prev_posiR = posiR;
   
   if (movInches > 0.0) {
     // Move forward
-    while (leftMotorCount < prev_leftMotorCount+L_encoderChange && rightMotorCount < prev_rightMotorCount+R_encoderChange) {
-      LeftMotorForward();
-      RightMotorForward();
+    while (posiL < prev_posiL+L_encoderChange && posiR < prev_posiR+R_encoderChange) {
+      RunPID(L_encoderChange, R_encoderChange);
+      //LeftMotorForward();
+      //RightMotorForward();
     }
     delay(10);
     DisableMotors();
   } else {
     // Move backward
-    while (leftMotorCount > prev_leftMotorCount+L_encoderChange && rightMotorCount > prev_rightMotorCount+R_encoderChange) {
-      LeftMotorBackward();
-      RightMotorBackward();
+    while (posiL > prev_posiL+L_encoderChange && posiR > prev_posiR+R_encoderChange) {
+      RunPID(L_encoderChange, R_encoderChange);
+      //LeftMotorBackward();
+      //RightMotorBackward();
     }
     delay(10);
     DisableMotors();
@@ -386,22 +393,24 @@ int Rotate(float rotDegrees) {
   // Calculate the distance in terms of encoder values, and once encoder valueis reached must stop
   float L_encoderChange = int((rotDegrees*L_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
   float R_encoderChange = int((rotDegrees*R_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
-  int prev_leftMotorCount = leftMotorCount;
-  int prev_rightMotorCount = rightMotorCount;
+  int prev_posiL = posiL;
+  int prev_posiR = posiR;
   
   if (rotDegrees > 0.0) {
     // Turn right
-    while (leftMotorCount < prev_leftMotorCount+L_encoderChange && rightMotorCount > prev_rightMotorCount-R_encoderChange) {
-      LeftMotorForward();
-      RightMotorBackward();                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+    while (posiL < prev_posiL+L_encoderChange && posiR > prev_posiR-R_encoderChange) {
+      RunPID(L_encoderChange, R_encoderChange);
+      //LeftMotorForward();
+      //RightMotorBackward();                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
     }
     delay(10);
     DisableMotors();
   } else {
     // Turn left
-    while (leftMotorCount > prev_leftMotorCount+L_encoderChange && rightMotorCount < prev_rightMotorCount-R_encoderChange) {
-      LeftMotorBackward();
-      RightMotorForward();
+    while (posiL > prev_posiL+L_encoderChange && posiR < prev_posiR-R_encoderChange) {
+      RunPID(L_encoderChange, R_encoderChange);
+      //LeftMotorBackward();
+      //RightMotorForward();
     }
     delay(10);
     DisableMotors();
@@ -426,39 +435,37 @@ void setMotor(int dir, int pwmVal, int pwm, int in1, int in2){
   }  
 }
 
+// void LeftMotorForward(void) {
+//   // left motor rotates forward
+//   digitalWrite(leftMotorIn1, HIGH);
+//   digitalWrite(leftMotorIn2, LOW);
+//   analogWrite(leftMotorPin, LmotorSpeed);
+//   //delay(1000);
+// }
 
+// void LeftMotorBackward(void) {
+//   // left motor rotates backward
+//   digitalWrite(leftMotorIn1, LOW);
+//   digitalWrite(leftMotorIn2, HIGH);
+//   analogWrite(leftMotorPin, LmotorSpeed-8);
+//   //delay(1000);
+// }
 
-void LeftMotorForward(void) {
-  // left motor rotates forward
-  digitalWrite(leftMotorIn3, HIGH);
-  digitalWrite(leftMotorIn4, LOW);
-  analogWrite(leftMotorPin, LmotorSpeed);
-  //delay(1000);
-}
+// void RightMotorForward(void) {
+//   // right motor rotates forward
+//   digitalWrite(rightMotorIn1, HIGH);
+//   digitalWrite(rightMotorIn2, LOW);
+//   analogWrite(rightMotorPin, RmotorSpeed-6);
+//   //delay(1000);
+// }
 
-void LeftMotorBackward(void) {
-  // left motor rotates backward
-  digitalWrite(leftMotorIn3, LOW);
-  digitalWrite(leftMotorIn4, HIGH);
-  analogWrite(leftMotorPin, LmotorSpeed-8);
-  //delay(1000);
-}
-
-void RightMotorForward(void) {
-  // right motor rotates forward
-  digitalWrite(rightMotorIn1, HIGH);
-  digitalWrite(rightMotorIn2, LOW);
-  analogWrite(rightMotorPin, RmotorSpeed-6);
-  //delay(1000);
-}
-
-void RightMotorBackward(void) {
-  // right motor rotates backward
-  digitalWrite(rightMotorIn1, LOW);
-  digitalWrite(rightMotorIn2, HIGH);
-  analogWrite(rightMotorPin, RmotorSpeed);
-  //delay(1000);
-}
+// void RightMotorBackward(void) {
+//   // right motor rotates backward
+//   digitalWrite(rightMotorIn1, LOW);
+//   digitalWrite(rightMotorIn2, HIGH);
+//   analogWrite(rightMotorPin, RmotorSpeed);
+//   //delay(1000);
+// }
 
 int UpdateStage_LED(float stageNum) {
   // LED lights up
@@ -509,7 +516,7 @@ void Parallel(void) {
   // both sides over the sensor difference limit (not parallel)
   if (L_sensor_diff > sensorDifferenceLimit && R_sensor_diff > sensorDifferenceLimit) {
     if (closestSensorIndex == 1) {
-      Rotate(6);
+      Rotate(6);                                                                                                                                                                                                                                                                                   
     } else if (closestSensorIndex == 2) {
       Rotate(-6);
     } else if (closestSensorIndex == 3) {
@@ -523,6 +530,137 @@ void Parallel(void) {
 
   // if not initialized yet, need to keep swimming, move forward 4 inches or backward 2 inches
   
+}
+
+void CheckTurnClearance(void) {
+
+  // boolean cleared
+  bool cleared = false;
+  // front turn limit, side turn limit, estop limit (aka back limit)
+  float frontTurnLimit = 2.0;
+  float sidesTurnLimit = 2.76;
+  float estopLimit = 1.18;
+  float wallLimit = 4.5;
+  float sensorTolerance = 2;
+  
+  // get sensor readings and put into list -> distanceBuffer[7]
+  GetAllSensorReadings(numAvg);
+
+  // calculate avg left sensor and avg right sensor values
+  float L_sense = (distanceBuffer[1]+distanceBuffer[2])/2;
+  float R_sense = (distanceBuffer[3]+distanceBuffer[4])/2;
+
+  // if no wall in front
+  // set front turn limit -> 1 tile, 2 tile, 3 tile
+  // distanceBuffer[7] --> 0.front, 1.left-front, 2.left-back, 3.right-front, 4.right-back, 5. back, 6.front-bottom
+  if (distanceBuffer[0] > wallLimit + sensorTolerance) {
+    if (distanceBuffer[0] < 24) {
+      frontTurnLimit = 14.5;
+    } else if (distanceBuffer[0] < 36) {
+      frontTurnLimit = 26.5;
+    } else if (distanceBuffer[0] < 48) {
+      frontTurnLimit = 38.5;
+    }
+  }
+
+  // while front < front turn limit or back < estop limit, move forward or backward
+      // set front turn limit -> 1 tile, 2 tile, 3 tile
+  while (distanceBuffer[0] < frontTurnLimit || distanceBuffer[5] < estopLimit) {
+    
+    if (distanceBuffer[0] < frontTurnLimit) {
+      MoveForward(-1);
+    } else if (distanceBuffer[5] < estopLimit) {
+      MoveForward(0.75);
+    }
+
+    GetAllSensorReadings(numAvg);
+
+    if (distanceBuffer[0] > wallLimit + sensorTolerance) {
+        if (distanceBuffer[0] < 24) {
+        frontTurnLimit = 14.5;
+      } else if (distanceBuffer[0] < 36) {
+        frontTurnLimit = 26.5;
+      } else if (distanceBuffer[0] < 48) {
+        frontTurnLimit = 38.5;
+      }
+    }
+  }
+
+  
+  // while left < side turn limit, do left adjustment
+  // while right < side turn limit, do right adjustment
+      // set front turn limit -> 1 tile, 2 tile, 3 tile
+  while (L_sense < sidesTurnLimit || R_sense < sidesTurnLimit) {
+    if (L_sense < sidesTurnLimit) {
+      // do the turns
+      Rotate(-15);
+      MoveForward(-1);
+      Rotate(12);
+      MoveForward(1);
+    } else if (R_sense < sidesTurnLimit) {
+      // do the turns
+      Rotate(15);
+      MoveForward(-1);
+      Rotate(-12);
+      MoveForward(1);
+    }
+
+    GetAllSensorReadings(numAvg);
+
+    if (distanceBuffer[0] > wallLimit + sensorTolerance) {
+      if (distanceBuffer[0] < 24) {
+        frontTurnLimit = 14.5;
+      } else if (distanceBuffer[0] < 36) {
+        frontTurnLimit = 26.5;
+      } else if (distanceBuffer[0] < 48) {
+        frontTurnLimit = 38.5;
+      }   
+    }
+
+  // set true clear once done
+  cleared = true;
+  
+  }
+}
+
+void RunPID(float L_enc_change, float R_enc_change) {
+  // enc values to move to
+  if (targetL<L_enc_change && targetR<R_enc_change) {
+    targetL = targetL + (L_enc_change);
+    targetR = targetR + (R_enc_change);
+  }
+  
+  Serial.print("Left Target: ");
+  Serial.println(targetL);
+  Serial.print("Right Target: ");
+  Serial.println(targetR);
+  
+  // set positions steady to use in calcs
+  int posR = 0; 
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    posR = posiR;   // comes from encoder values caluclated in interrupts
+  }
+  
+  int posL = 0; 
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    posL = posiL;   // comes from encoder values calcuolated in interrupts
+  }
+
+  motor_params right_motor;
+  motor_params left_motor;
+  right_motor = calc_PID(posR, targetR*-1, right_motor_PID_params);
+  left_motor = calc_PID(posL, targetL, left_motor_PID_params);
+  Serial.print("Right motor direction, speed: ");
+  Serial.print(right_motor.dir);
+  Serial.println(right_motor.pwr);
+  Serial.print("Left motor direction, speed: ");
+  Serial.print(left_motor.dir);
+  Serial.println(left_motor.pwr);
+
+  // signal the motor
+  setMotor(right_motor.dir,right_motor.pwr,rightMotorPin,rightMotorIn1,rightMotorIn2);
+  setMotor(left_motor.dir,left_motor.pwr,leftMotorPin,leftMotorIn1,leftMotorIn2);
+
 }
 
 int MoveArm(float rotDegrees) {

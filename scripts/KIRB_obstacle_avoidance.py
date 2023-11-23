@@ -5,7 +5,7 @@ from KIRB_python_arduino import PyArduino
 from KIRB_localization import MazeLocalization
 from KIRB_block_detection import BlockDetection
 
-PA = PyArduino(com_port="COM4")
+PA = PyArduino(com_port="COM7")
 ML = MazeLocalization()
 BD = BlockDetection()
 
