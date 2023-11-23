@@ -134,6 +134,7 @@ void loop() {
     } else if (cmdStr.charAt(0) == 'r') {
       // Rotates depending on number of degrees sent
       cmdStr.remove(0,3);
+      CheckTurnClearance();
       Rotate(cmdStr.toFloat());
       GetAllSensorReadings(numAvg);
       
@@ -513,6 +514,7 @@ void CheckTurnClearance(void) {
       }
     }
   }
+}
   
   // while left < side turn limit, do left adjustment
   // while right < side turn limit, do right adjustment
