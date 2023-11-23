@@ -47,6 +47,8 @@ void InitInterrupts(void);
 void DisableMotors(void);
 void Parallel(void);
 double sensorDifferenceLimit = 0.15;
+void CheckTurnClearance(void);
+
 int MoveArm(float rotDegrees);
 void OpenGripper(void);
 void CloseGripper(void);
@@ -455,6 +457,95 @@ void Parallel(void) {
   // if too close to a wall (less than estop limit, check_turn_clearance()
 
   // if not initialized yet, need to keep swimming, move forward 4 inches or backward 2 inches
+  
+}
+
+void CheckTurnClearance(void) {
+
+  // boolean cleared
+  bool cleared = false
+  // front turn limit, side turn limit, estop limit (aka back limit)
+  float frontTurnLimit = 2.0;
+  float sidesTurnLimit = 2.76;
+  float estopLimit = 1.18;
+  float wallLimit = 4.5;
+  float sensorTolerance = 2;
+  
+  // get sensor readings and put into list -> distanceBuffer[7]
+  GetAllSensorReadings();
+
+  // calculate avg left sensor and avg right sensor values
+  float L_sense = (distanceBuffer[1]+distanceBuffer[2])/2;
+  float R_sense = (distanceBuffer[3]+distanceBuffer[4])/2;
+
+  // if no wall in front
+  // set front turn limit -> 1 tile, 2 tile, 3 tile
+  // distanceBuffer[7] --> 0.front, 1.left-front, 2.left-back, 3.right-front, 4.right-back, 5. back, 6.front-bottom
+  if (distanceBuffer[0] > wallLimit + sensorTolerance) {
+    if (distanceBuffer[0] < 24) {
+      frontTurnLimit = 14.5;
+    } else if (distanceBuffer[0] < 36) {
+      frontTurnLimit = 26.5;
+    } else if (distanceBuffer[0] < 48) {
+      frontTurnLimit = 38.5;
+    }
+  }
+
+  // while front < front turn limit or back < estop limit, move forward or backward
+      // set front turn limit -> 1 tile, 2 tile, 3 tile
+  while (distanceBuffer[0] < frontTurnLimit || distanceBuffer[5] < estopLimit) {
+    
+    if (distanceBuffer[0] < frontTurnLimit) {
+      MoveForward(-1);
+    } else if (distanceBuffer[5] < estopLimit) {
+      MoveForward(0.75);
+    }
+
+    GetAllSensorReadings();
+
+    if (distanceBuffer[0] > wallLimit + sensorTolerance) {
+        if (distanceBuffer[0] < 24) {
+        frontTurnLimit = 14.5;
+      } else if (distanceBuffer[0] < 36) {
+        frontTurnLimit = 26.5;
+      } else if (distanceBuffer[0] < 48) {
+        frontTurnLimit = 38.5;
+      }
+    }
+  }
+  
+  // while left < side turn limit, do left adjustment
+  // while right < side turn limit, do right adjustment
+      // set front turn limit -> 1 tile, 2 tile, 3 tile
+  while (L_sense < sidesTurnLimit || R_sense < sidesTurnLimit) {
+    if (L_sense < sidesTurnLimit) {
+      // do the turns
+      Rotate(-15);
+      MoveForward(-1);
+      Rotate(12);
+      MoveForward(1);
+    } else if (R_sense < sidesTurnLimit) {
+      // do the turns
+      Rotate(15);
+      MoveForward(-1);
+      Rotate(-12);
+      MoveForward(1);
+    }
+
+    GetAllSensorReadings();
+
+    if (distanceBuffer[0] > wallLimit + sensorTolerance) {
+      if (distanceBuffer[0] < 24) {
+      frontTurnLimit = 14.5;
+    } else if (distanceBuffer[0] < 36) {
+      frontTurnLimit = 26.5;
+    } else if (distanceBuffer[0] < 48) {
+      frontTurnLimit = 38.5;
+    }   
+  }
+
+  // set true clear once done
+  cleared = true;
   
 }
 
