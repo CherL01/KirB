@@ -553,7 +553,9 @@ void CheckTurnClearance(void) {
   }
 }
 int MoveArm(float rotDegrees) {
+  
   ArmServo.write(rotDegrees); // sets the servo position according to the scaled value
+
   delay(2000);                // waits for the servo to get there
   return rotDegrees;
 }
