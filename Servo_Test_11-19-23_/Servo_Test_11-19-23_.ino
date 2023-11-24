@@ -12,8 +12,9 @@ void CloseGripper(void);
 
 void setup() {
   // put your setup code here, to run once:
-  ArmServo.attach(3);
-  GripperServo.attach(5);
+  ArmServo.write(150);        // set default position to be vertical
+  ArmServo.attach(45);
+  GripperServo.attach(46);
   Serial.begin(9600);
 }
 

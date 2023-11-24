@@ -71,8 +71,8 @@ void RightMotorForward(void);
 void RightMotorBackward(void);
 
 //Define Variables
-int LmotorSpeed = 95;
-int RmotorSpeed = 110;
+int LmotorSpeed = 95;       // 95 (when battery full)
+int RmotorSpeed = 112;      // 110 (when battery full)
 String cmdStr;
 volatile long leftMotorCount = 0;
 volatile long rightMotorCount = 0;
@@ -134,7 +134,10 @@ void loop() {
     } else if (cmdStr.charAt(0) == 'r') {
       // Rotates depending on number of degrees sent
       cmdStr.remove(0,3);
-      CheckTurnClearance();
+//      if (cmdStr.toFloat() >80 || cmdStr.toFloat() < -80) {
+//        CheckTurnClearance();
+//      }
+      delay(100);
       Rotate(cmdStr.toFloat());
       GetAllSensorReadings(numAvg);
       
@@ -217,7 +220,7 @@ void InitMotors(void) {
   pinMode(leftMotorIn4, OUTPUT);        
 
 //  //Servo motors pins
-  ArmServo.write(150);        // set default position to be vertical
+  ArmServo.write(180);        // set default position to be vertical
   ArmServo.attach(45);        // needs pwm pins
   GripperServo.attach(46);    // needs pwm pins
 }
@@ -377,7 +380,7 @@ void LeftMotorBackward(void) {
   // left motor rotates backward
   digitalWrite(leftMotorIn3, LOW);
   digitalWrite(leftMotorIn4, HIGH);
-  analogWrite(leftMotorPin, LmotorSpeed-8);
+  analogWrite(leftMotorPin, LmotorSpeed-6);
   //delay(1000);
 }
 
@@ -385,7 +388,7 @@ void RightMotorForward(void) {
   // right motor rotates forward
   digitalWrite(rightMotorIn1, HIGH);
   digitalWrite(rightMotorIn2, LOW);
-  analogWrite(rightMotorPin, RmotorSpeed-6);
+  analogWrite(rightMotorPin, RmotorSpeed);
   //delay(1000);
 }
 
@@ -393,7 +396,7 @@ void RightMotorBackward(void) {
   // right motor rotates backward
   digitalWrite(rightMotorIn1, LOW);
   digitalWrite(rightMotorIn2, HIGH);
-  analogWrite(rightMotorPin, RmotorSpeed);
+  analogWrite(rightMotorPin, RmotorSpeed-3);
   //delay(1000);
 }
 
@@ -444,7 +447,7 @@ void Parallel(void) {
   }
 
   // both sides over the sensor difference limit (not parallel)
-  if (L_sensor_diff < sensorDifferenceLimit && R_sensor_diff < sensorDifferenceLimit) {
+  if (L_sensor_diff > sensorDifferenceLimit && R_sensor_diff > sensorDifferenceLimit) {
     if (closestSensorIndex == 1) {
       Rotate(6);                                                                                                                                                                                                                                                                                   
     } else if (closestSensorIndex == 2) {
@@ -499,8 +502,10 @@ void CheckTurnClearance(void) {
     
     if (distanceBuffer[0] < frontTurnLimit) {
       MoveForward(-1);
+      delay(1000);
     } else if (distanceBuffer[5] < estopLimit) {
       MoveForward(0.75);
+      delay(1000);
     }
 
     GetAllSensorReadings(numAvg);
@@ -524,15 +529,23 @@ void CheckTurnClearance(void) {
     if (L_sense < sidesTurnLimit) {
       // do the turns
       Rotate(-15);
+      delay(200);
       MoveForward(-1);
-      Rotate(12);
+      delay(200);
+      Rotate(15);
+      delay(200);
       MoveForward(1);
+      delay(1000);
     } else if (R_sense < sidesTurnLimit) {
       // do the turns
       Rotate(15);
+      delay(200);
       MoveForward(-1);
-      Rotate(-12);
+      delay(200);
+      Rotate(-15);
+      delay(200);
       MoveForward(1);
+      delay(1000);
     }
 
     GetAllSensorReadings(numAvg);
@@ -564,7 +577,7 @@ void OpenGripper(void) {
   // this only sets the speed. To stop, use GripperServo.write(90)
   //To open
   GripperServo.write(65);   // calibrate
-  delay(800);
+  delay(400);
   GripperServo.write(90);
 }
 

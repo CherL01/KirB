@@ -15,6 +15,9 @@ class BlockDetection():
 
         # initialize that block is not within pick up range
         self.pick_up_range = False
+        
+        self.prev_reading = None
+        self.scan_direction = None
     
     def get_front_bot_diff(self, sensor_dict):
         '''
@@ -41,8 +44,10 @@ class BlockDetection():
         # rotate until it detects a block
         else:
             if direction == 'L':
+                self.scan_direction = 'L'
                 return self.block_detected, ['r0--5']
             else:
+                self.scan_direction = 'R'
                 return self.block_detected, ['r0-5']
         
     def check_clearance_to_block(self, sensor_dict):
@@ -54,7 +59,20 @@ class BlockDetection():
         
         if front_bot_sensor_diff > self.front_sensor_diff_limit:
             # move the robot forward/backward to get in proper spot to pick up the block
-            if sensor_dict['u6'] > 6: 
+            
+            
+            if self.prev_reading is not None and abs(self.prev_reading - sensor_dict['u6']) > 7:
+                print("can't find block anymore")
+                if self.scan_direction == 'L':
+                    self.prev_reading = None
+                    return self.pick_up_range, ['r0-3']
+                else: 
+                    self.prev_reading = None
+                    return self.pick_up_range, ['r0--3']
+                
+            self.prev_reading = sensor_dict['u6']
+            
+            if sensor_dict['u6'] > 5: 
                 return self.pick_up_range, ['w0-0.5']
             
             elif sensor_dict['u6'] < 4:
@@ -77,7 +95,7 @@ class BlockDetection():
         '''
         
         # move arm down, move forward, close gripper, move arm up
-        return ['a20', 'w0-1', 'gc', 'a160']
+        return ['a40', 'w0-1', 'gc', 'a180']
     
     def drop_off_block(self):
         ''' 
@@ -88,4 +106,4 @@ class BlockDetection():
         '''
         
         # move back 5 inches to give room, move arm down, open gripper, move back, move arm up
-        return ['w0--5', 'a20', 'go', 'w0--1', 'a160']
+        return ['w0--5', 'a40', 'go', 'w0--1', 'a180']

@@ -64,7 +64,7 @@ class ObstacleAvoidance():
         '''
 
         # get all sensor readings
-        self.get_sensor_readings()
+        sensor_list = self.get_sensor_readings()
         front_sensor = self.sensor_label2reading_dict['u0']
         back_sensor = self.sensor_label2reading_dict['u5']
 
@@ -79,6 +79,13 @@ class ObstacleAvoidance():
             if self.detect_wall(back_sensor):
                 self.move('r0-90')
                 return False
+            
+            elif ML.loading_zone is True:
+                if sensor_list[1] < ML.wall_limit or sensor_list[3] < ML.wall_limit:
+                    return True
+                else:
+                    self.move('r0-90')
+                    return False
             
             else:
                 return True
@@ -116,12 +123,12 @@ class ObstacleAvoidance():
 
         # split sensor readings and store in init variables
         # time.sleep(5)
-        for _ in range(6):
+        for _ in range(3):
             
             # get message from buffer
             message = PA.blocking_read()
 
-            print('message: ', message)
+            # print('message: ', message)
             
             try:
                 # print('message split: ', message.split('|')[1:8])
@@ -171,8 +178,10 @@ class ObstacleAvoidance():
         input: command
         output: None
         '''
-        # if 'r' in command and (str(self.left_turn_angle) in command or str(self.right_turn_angle) in command):
-        #     self.check_turn_clearance()
+        if 'r' in command and (str(self.left_turn_angle) in command or str(self.right_turn_angle) in command):
+            # self.move('x')
+            self.check_turn_clearance()
+            # self.move('s')
 
         PA.write(command)
         time.sleep(3)
@@ -433,7 +442,7 @@ class ObstacleAvoidance():
                 sensors_list[2] = 60
                 print('changed sensor list: ', sensors_list)
 
-            # if in D1, S:
+            # if in D1, S or A1, w:
             elif (sensors_list[3] < ML.wall_limit) and (sensors_list[2] > 35) and (sensors_list[1] > 30): # and (sensors_list[2] < 42):
                 if ML.loading_zone is False:
                     print('in D1 (S), changed left sensor value')
@@ -444,7 +453,7 @@ class ObstacleAvoidance():
                     print('in A1 (W), did not change sensor values')
 
             # if in D6, S OR A1, N:
-            elif (sensors_list[1] < ML.wall_limit) and (36 < sensors_list[2] < 42) and (sensors_list[3] > 37):
+            elif (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 37): # (36 < sensors_list[2] < 42) and 
                 if ML.loading_zone is False:
                     print('in D6 (S), changed right sensor')
                     sensors_list[3] = 60
@@ -492,7 +501,7 @@ class ObstacleAvoidance():
         # loops until localization is fully complete
         while ML.localized is False:
 
-            sensors_list = self.get_sensor_readings()
+            # sensors_list = self.get_sensor_readings()
 
             # # check wall locations, turn off parallel if at 3 or 4 way intersection
             # wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
@@ -582,7 +591,6 @@ class ObstacleAvoidance():
                 #     self.parallel()
 
             print('reached drop off zone!')
-            self.move('led2')
             self.move('led3')
             
             print('disabled parallel')
@@ -602,6 +610,8 @@ class ObstacleAvoidance():
 
         # scan for block
         print('scanning for block')
+        turns = 0
+        direction_changed = False
         while True:
 
             # get sensor readings and current square in loading zone
@@ -613,22 +623,33 @@ class ObstacleAvoidance():
             # if current square is B1, start by scanning right
             if current_square == 'B1':
 
-                if sensor_list[3] < 35:
+                # if sensor_list[3] < 35:
+                if direction_changed is False: # sensor_list[0] < 25:
                     direction = 'R'
+                    turns += 1
 
                 # if right sensor reads more than 20, scan left
                 else:
                     direction = 'L'
+                    
+                    
 
             # if current square is A2, start by scanning left
             elif current_square == 'A2':
 
-                if sensor_list[1] < 35:
+                # if sensor_list[1] < 35:
+                if direction_changed is False: # sensor_list[0] < 25:
                     direction = 'L'
+                    turns += 1
 
                 # if left sensor reads more than 20, scan right
                 else:
                     direction = 'R'
+                    # angle = 5 * turns
+                    # self.move(f'r0-{angle}')
+                    # self.move('w0-12')
+                    # self.move('r0--90')
+                    # turns = 0
 
             # run block detection
             print('direction: ', direction)
@@ -644,6 +665,19 @@ class ObstacleAvoidance():
 
                 print('command (during block detection): ', command)
                 self.move(command)
+                
+            if sensor_list[0] > 25:
+                if current_square == 'B1':
+                    angle = 90 - 5 * turns
+                    self.move(f'r0-{angle}')
+                    turns = 0
+                    direction_changed = True
+                    
+                else:
+                    angle = 90 - 5 * turns
+                    self.move(f'r0--{angle}')
+                    turns = 0
+                    direction_changed = True
 
         # block detected, will move so block is in pick up range
         print('moving to pick up block')
@@ -673,6 +707,9 @@ class ObstacleAvoidance():
 
             print('command (pick up): ', command)
             self.move(command)
+        
+        # block picked up
+        self.move('led2')
 
     def block_drop_off(self):
         '''
@@ -699,24 +736,24 @@ drop_off_loc = 'A6'
 OA = ObstacleAvoidance()
 
 # # navigates to a localizable square
-# OA.initial_navigation()
+OA.initial_navigation()
 
 # # tries to localize then travel to loading zone
-# OA.localize_and_navigate('loading zone')
+OA.localize_and_navigate('loading zone')
 
 # start block detection
-OA.loading_zone_path = ['A2']
+# OA.loading_zone_path = ['B1']
 OA.block_detect_and_move()
 
 # renavigate to a localizable square
-# OA.initial_navigation()
+OA.initial_navigation()
 
-# # milestone 2
-# ML.initial = False
-# ML.localized = True
+# # # milestone 2
+# # ML.initial = False
+# # ML.localized = True
 
 # tries to localize then travel to drop off zone
-# OA.localize_and_navigate('drop off zone', drop_off_loc)
+OA.localize_and_navigate('drop off zone', drop_off_loc)
 
 # # drop off block
 OA.block_drop_off()
