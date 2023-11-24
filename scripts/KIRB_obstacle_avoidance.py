@@ -133,7 +133,7 @@ class ObstacleAvoidance():
             except ValueError:
                 self.get_sensor_readings()
 
-        # print('\nsensor reading dict: ', self.sensor_label2reading_dict)
+        print('\nsensor reading dict: ', self.sensor_label2reading_dict)
 
         # organize sensor readings in F, L, B, R order
         f = self.sensor_label2reading_dict['u0']
@@ -608,7 +608,7 @@ class ObstacleAvoidance():
             sensor_list = self.get_sensor_readings()
             current_square = self.loading_zone_path[-1]
             print('sensor list: ', sensor_list)
-            print('currnet square: ', current_square)
+            print('current square: ', current_square)
 
             # if current square is B1, start by scanning right
             if current_square == 'B1':
@@ -649,7 +649,7 @@ class ObstacleAvoidance():
         print('moving to pick up block')
         while True:
             # get sensor readings
-            _ = self.get_sensor_readings()
+            sensor_list = self.get_sensor_readings()
 
             # run check clearance
             in_range, commands = BD.check_clearance_to_block(self.sensor_label2reading_dict)
@@ -699,24 +699,24 @@ drop_off_loc = 'A6'
 OA = ObstacleAvoidance()
 
 # # navigates to a localizable square
-OA.initial_navigation()
+# OA.initial_navigation()
 
 # # tries to localize then travel to loading zone
-OA.localize_and_navigate('loading zone')
+# OA.localize_and_navigate('loading zone')
 
 # start block detection
 OA.loading_zone_path = ['A2']
 OA.block_detect_and_move()
 
 # renavigate to a localizable square
-OA.initial_navigation()
+# OA.initial_navigation()
 
 # # milestone 2
 # ML.initial = False
 # ML.localized = True
 
 # tries to localize then travel to drop off zone
-OA.localize_and_navigate('drop off zone', drop_off_loc)
+# OA.localize_and_navigate('drop off zone', drop_off_loc)
 
 # # drop off block
 OA.block_drop_off()

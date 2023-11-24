@@ -137,7 +137,15 @@ motor_params calc_PID(int pos, int target, PID_params &params){
 
   // control signal
   float u = params.kp*e + params.kd*dedt + params.ki*params.eintegral;
-
+//  Serial.print("deltaT: ");
+//  Serial.println(deltaT);
+//  Serial.print("pos: ");
+//  Serial.println(pos);
+//  Serial.print("target: ");
+//  Serial.println(target);
+//  Serial.print("u: ");
+//  Serial.println(u);
+  
   // motor power
   float pwr = fabs(u);
   if( pwr > 255 ){

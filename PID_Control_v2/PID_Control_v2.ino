@@ -109,7 +109,6 @@ struct motor_params {
 
 volatile long posiR = 0; // volatile position since interrupt
 volatile long posiL = 0; 
-volatile long posi[] = {posiR, posiL};
 
 PID_params right_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
 PID_params left_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
@@ -118,6 +117,9 @@ long targetL = 0; // positive = forward
 long targetR = 0; // negative = forward
 
 void RunPID(float L_enc_change, float R_enc_change);
+int read_posL(void);
+int read_posR(void);
+int increment = 50;
 int L_goal_pos = 0;
 int R_goal_pos = 0;
 
@@ -255,21 +257,60 @@ void InitInterrupts(void) {
   pinMode(rightEncB, INPUT);
   pinMode(leftEncA, INPUT);
   pinMode(leftEncB, INPUT);
-
-  // read encoder 0 = right, 1 = left
-  attachInterrupt(digitalPinToInterrupt(rightEncA),readEncoder<0>,RISING);
-  attachInterrupt(digitalPinToInterrupt(leftEncA),readEncoder<1>,RISING);
+  attachInterrupt(digitalPinToInterrupt(leftEncA),EncoderEvent,CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rightEncA),EncoderEvent,CHANGE);
+  
 }
 
-template <int j>
-void readEncoder(){
-  int b = digitalRead(encoders[j]);
-  if(b > 0){
-    posi[j]++;
+// void readEncoderL(){
+//   int b = digitalRead(leftEncB);
+//   if(b > 0){
+//     posiL++;
+//   }
+//   else{
+//     posiL--;
+//   }
+// }
+
+// void readEncoderR(){
+//   int b = digitalRead(rightEncB);
+//   if(b > 0){
+//     posiR++;
+//   }
+//   else{
+//     posiR--;
+//   }
+// }
+
+void EncoderEvent() {
+  // Left Motor
+  if (digitalRead(leftEncA) == HIGH) {      // A high
+    if (digitalRead(leftEncB) == LOW) {
+      posiL--;
+    } else {
+      posiL++;
+    }
+  } else {                                  // A low
+    if (digitalRead(leftEncB) == LOW) {
+      posiL++;
+    } else {
+      posiL--;
+    }
   }
-  else{
-    posi[j]--;
-  }
+  // Right Motor
+  if (digitalRead(rightEncA) == HIGH) {
+    if (digitalRead(rightEncB) == LOW) {
+      posiR++;
+    } else {
+      posiR--;
+    }
+  } else {
+    if (digitalRead(rightEncB) == LOW) {
+      posiR--;
+    } else {
+      posiR++;
+    }
+  }  
 }
 
 void DisableMotors(void) {
@@ -321,15 +362,17 @@ int GetAllSensorReadings(float numAvg) {
 
 int MoveForward(float movInches) {
   // Calculate the distance in terms of encoder values, and once encoder value is reached must stop
-  float L_encoderChange = int(movInches*L_encValPerInch); // positive
-  float R_encoderChange = int(movInches*R_encValPerInch); // positive
+  float L_encoderChange = int(movInches*L_encValPerInch); 
+  float R_encoderChange = int(movInches*R_encValPerInch); 
   
   int prev_posiL = read_posL();
   int prev_posiR = read_posR();
   
   if (movInches > 0.0) {
     // Move forward
+
     while (read_posL() < prev_posiL+L_encoderChange && read_posR() < prev_posiR+R_encoderChange) {
+      // L and R enc change both positive
       RunPID(L_encoderChange, R_encoderChange);
       //LeftMotorForward();
       //RightMotorForward();
@@ -338,7 +381,9 @@ int MoveForward(float movInches) {
     DisableMotors();
   } else {
     // Move backward
+
     while (read_posL() > prev_posiL+L_encoderChange && read_posR() > prev_posiR+R_encoderChange) {
+      // L and R enc change both negative
       RunPID(L_encoderChange, R_encoderChange);
       //LeftMotorBackward();
       //RightMotorBackward();
@@ -359,11 +404,11 @@ int Rotate(float rotDegrees) {
     float L_encoderChange = int((rotDegrees*L_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
     float R_encoderChange = int(-1*(rotDegrees*R_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
     
-    
     L_goal_pos = L_encoderChange + read_posL();
     R_goal_pos = R_encoderChange + read_posR();
 
     while (read_posL() < L_goal_pos && read_posR() > R_goal_pos) {
+      // L enc change positive, R enc change negative
       RunPID(L_encoderChange, R_encoderChange);
       //LeftMotorForward();
       //RightMotorBackward();                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
@@ -380,6 +425,7 @@ int Rotate(float rotDegrees) {
     R_goal_pos = R_encoderChange + read_posR();
 
     while (read_posL() > L_goal_pos && read_posR() < R_goal_pos) {
+      // L enc change negative, R enc change positive
       RunPID(L_encoderChange, R_encoderChange);
       //LeftMotorBackward();
       //RightMotorForward();
@@ -595,21 +641,22 @@ void CheckTurnClearance(void) {
 }
 
 int read_posL(void){
-  int pos = 0; 
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    pos = posiL;   // comes from encoder values caluclated in interrupts
-  }
-  return pos;
-}
+  // int posL=0;
+  // ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+  //   posL = posiL;   // comes from encoder values caluclated in interrupts
+  // }
+  int posL = posiL;
+  return posL;
+} 
 
 int read_posR(void){
-  int pos = 0; 
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    pos = posiR;   // comes from encoder values caluclated in interrupts
-  }
-  return pos;
-}
-  
+  // int posR=0;
+  // ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+  //   posR = posiR;   // comes from encoder values caluclated in interrupts
+  // }
+  int posR = posiR;
+  return posR;
+} 
 
 void RunPID(float L_enc_change, float R_enc_change) {
   
@@ -617,46 +664,50 @@ void RunPID(float L_enc_change, float R_enc_change) {
   targetL = targetL + L_enc_change/50;
 
   // enc values to move to
-  // Serial.print("Left Target: ");
-  // Serial.println(targetL);
-  // Serial.print("Right Target: ");
-  // Serial.println(targetR);
+  Serial.print("Left Target: ");
+  Serial.println(targetL);
+  Serial.print("Right Target: ");
+  Serial.println(targetR);
 
-  // Serial.print("Left pos: ");
-  // Serial.println(read_posL());
-  // Serial.print("Right pos: ");
-  // Serial.println(read_posR());
+  Serial.print("Left pos: ");
+  Serial.println(read_posL());
+  Serial.print("Right pos: ");
+  Serial.println(read_posR());
   
-  // set positions steady to use in calcs
-  int posR = 0; 
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    posR = posiR;   // comes from encoder values caluclated in interrupts
-  }
+  // // set positions steady to use in calcs
+  // int posR = 0; 
+  // ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+  //   posR = posiR;   // comes from encoder values caluclated in interrupts
+  // }
   
-  int posL = 0; 
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    posL = posiL;   // comes from encoder values calcuolated in interrupts
-  }
+  // int posL = 0; 
+  // ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+  //   posL = posiL;   // comes from encoder values calcuolated in interrupts
+  // }
 
-  motor_params right_motor;   
-  right_motor = calc_PID(posR, targetR, right_motor_PID_params);
+  int posR = posiR;
+  int posL = posiL;
+  
   motor_params left_motor;
   left_motor = calc_PID(posL, targetL*-1, left_motor_PID_params);
-
-  // debug
-  // Serial.print("Right motor direction, speed: ");
-  // Serial.print(right_motor.dir);
-  // Serial.print(", ");
-  // Serial.println(right_motor.pwr);
-  // Serial.print("Left motor direction, speed: ");
-  // Serial.print(left_motor.dir);
-  // Serial.print(", ");
-  // Serial.println(left_motor.pwr);
-
+  motor_params right_motor;   
+  right_motor = calc_PID(posR, targetR*-1, right_motor_PID_params);
+  
   // signal the motor
   setMotor(right_motor.dir,right_motor.pwr,rightMotorPin,rightMotorIn1,rightMotorIn2);
   setMotor(left_motor.dir,left_motor.pwr,leftMotorPin,leftMotorIn1,leftMotorIn2);
 
+  // debug
+  Serial.print("Right motor direction, speed: ");
+  Serial.print(right_motor.dir);
+  Serial.print(", ");
+  Serial.println(right_motor.pwr);
+  Serial.print("Left motor direction, speed: ");
+  Serial.print(left_motor.dir);
+  Serial.print(", ");
+  Serial.println(left_motor.pwr);
+
+  delay(200);
 }
 
 motor_params calc_PID(int pos, int target, PID_params &params){
@@ -667,7 +718,7 @@ motor_params calc_PID(int pos, int target, PID_params &params){
   params.prevT = currT;
 
   // error
-  int e = target - pos;
+  int e = pos - target;
 
   // derivative
   float dedt = (e-params.eprev)/(deltaT);
@@ -677,9 +728,13 @@ motor_params calc_PID(int pos, int target, PID_params &params){
 
   // control signal
   float u = params.kp*e + params.kd*dedt + params.ki*params.eintegral;
+  // Serial.print("deltaT: ");
   // Serial.println(deltaT);
+  // Serial.print("pos: ");
   // Serial.println(pos);
+  // Serial.print("target: ");
   // Serial.println(target);
+  // Serial.print("u: ");
   // Serial.println(u);
 
   // motor power

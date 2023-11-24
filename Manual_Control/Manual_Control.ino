@@ -217,8 +217,9 @@ void InitMotors(void) {
   pinMode(leftMotorIn4, OUTPUT);        
 
 //  //Servo motors pins
+  ArmServo.write(150);        // set default position to be vertical
   ArmServo.attach(45);        // needs pwm pins
-//  GripperServo.attach(46);    // needs pwm pins
+  GripperServo.attach(46);    // needs pwm pins
 }
 
 void InitInterrupts(void) {
@@ -443,7 +444,7 @@ void Parallel(void) {
   }
 
   // both sides over the sensor difference limit (not parallel)
-  if !(L_sensor_diff < sensorDifferenceLimit && R_sensor_diff < sensorDifferenceLimit) {
+  if (L_sensor_diff < sensorDifferenceLimit && R_sensor_diff < sensorDifferenceLimit) {
     if (closestSensorIndex == 1) {
       Rotate(6);                                                                                                                                                                                                                                                                                   
     } else if (closestSensorIndex == 2) {
@@ -464,7 +465,7 @@ void Parallel(void) {
 void CheckTurnClearance(void) {
 
   // boolean cleared
-  bool cleared = false
+  bool cleared = false;
   // front turn limit, side turn limit, estop limit (aka back limit)
   float frontTurnLimit = 2.0;
   float sidesTurnLimit = 2.76;
@@ -473,7 +474,7 @@ void CheckTurnClearance(void) {
   float sensorTolerance = 2;
   
   // get sensor readings and put into list -> distanceBuffer[7]
-  GetAllSensorReadings();
+  GetAllSensorReadings(numAvg);
 
   // calculate avg left sensor and avg right sensor values
   float L_sense = (distanceBuffer[1]+distanceBuffer[2])/2;
@@ -502,7 +503,7 @@ void CheckTurnClearance(void) {
       MoveForward(0.75);
     }
 
-    GetAllSensorReadings();
+    GetAllSensorReadings(numAvg);
 
     if (distanceBuffer[0] > wallLimit + sensorTolerance) {
         if (distanceBuffer[0] < 24) {
@@ -514,7 +515,7 @@ void CheckTurnClearance(void) {
       }
     }
   }
-}
+
   
   // while left < side turn limit, do left adjustment
   // while right < side turn limit, do right adjustment
@@ -534,23 +535,23 @@ void CheckTurnClearance(void) {
       MoveForward(1);
     }
 
-    GetAllSensorReadings();
+    GetAllSensorReadings(numAvg);
 
     if (distanceBuffer[0] > wallLimit + sensorTolerance) {
       if (distanceBuffer[0] < 24) {
-      frontTurnLimit = 14.5;
-    } else if (distanceBuffer[0] < 36) {
-      frontTurnLimit = 26.5;
-    } else if (distanceBuffer[0] < 48) {
-      frontTurnLimit = 38.5;
-    }   
-  }
+        frontTurnLimit = 14.5;
+      } else if (distanceBuffer[0] < 36) {
+        frontTurnLimit = 26.5;
+      } else if (distanceBuffer[0] < 48) {
+        frontTurnLimit = 38.5;
+      }   
+    }
 
   // set true clear once done
   cleared = true;
   
+  }
 }
-
 int MoveArm(float rotDegrees) {
   ArmServo.write(rotDegrees); // sets the servo position according to the scaled value
   delay(2000);                // waits for the servo to get there
@@ -560,8 +561,8 @@ int MoveArm(float rotDegrees) {
 void OpenGripper(void) {
   // this only sets the speed. To stop, use GripperServo.write(90)
   //To open
-  //GripperServo.write();   // calibrate
-  delay(2000);
+  GripperServo.write(65);   // calibrate
+  delay(800);
   GripperServo.write(90);
 }
 
