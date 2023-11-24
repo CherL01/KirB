@@ -108,14 +108,17 @@ struct motor_params {
 volatile long posiR = 0; // volatile position since interrupt
 volatile long posiL = 0; 
 
-PID_params right_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
-PID_params left_motor_PID_params = {1, 0.05, 0.05, 0, 0, 0};
+PID_params right_motor_PID_params = {4, 0.1, 0.8, 0, 0, 0};
+PID_params left_motor_PID_params = {4, 0.1, 0.8, 0, 0, 0};
 
 long targetL = 0; // positive = forward
 long targetR = 0; // negative = forward
 
 void RunPID(float L_enc_change, float R_enc_change);
-int increment = 50;
+int L_goal_pos = 0;
+int R_goal_pos = 0;
+
+long prevT_g=0;
 
 void setup() {
   // Initialize motors
@@ -130,11 +133,13 @@ void setup() {
   // HC-05 default speed in AT command mode 
 //  BTSerial.begin(9600); 
   Serial.setTimeout(50);
+  targetL = read_posL(); // positive = forward
+  targetR = read_posR(); // negative = forward
   delay(100);
 }
 
 void loop() {
-  delay(100);
+  delay(300);
   // Always run parallel
   if (Start==true) {
     Parallel();
@@ -168,8 +173,6 @@ void loop() {
       // Check which ultrasonic sensor we want to read from
       int numAvg = 1;       // # of times it reads the sensors
       cmdStr.remove(0,1);   // remove first char u to determine which sensor to read from
-      posiL = 0;
-      posiR = 0;
       
       if (cmdStr.charAt(0) == 'a') {
         GetAllSensorReadings(numAvg);
@@ -217,7 +220,7 @@ void loop() {
     }
   }
 
-  // display encoder values (for manual control only)
+//   // display encoder values (for manual control only)
 //  delay(300);
 //  Serial.print("Left | Right - motor count: ");
 //  Serial.print(posiL);
@@ -282,48 +285,12 @@ void readEncoderL(){
   }
 }
 
-motor_params calc_PID(int pos, int target, PID_params &params){
-  motor_params out;
-
-  long currT = micros();
-  float deltaT = ((float) (currT - params.prevT))/( 1.0e6 );
-  params.prevT = currT;
-
-  // error
-  int e = pos - target;
-
-  // derivative
-  float dedt = (e-params.eprev)/(deltaT);
-
-  // integral
-  params.eintegral = params.eintegral + e*deltaT;
-
-  // control signal
-  float u = params.kp*e + params.kd*dedt + params.ki*params.eintegral;
-
-  // motor power
-  float pwr = fabs(u);
-  if( pwr > 255 ){
-    pwr = 255;
-  }
-
-  // motor direction
-  int dir = 1;
-  if(u<0){
-    dir = -1;
-  }
-  
-  out.dir = dir;
-  out.pwr = pwr;
-  
-  return out;
-}
 
 float ReadUltrasonicSensor(int sensorNum, int numAvg) {
   float tempVal = 0.0;
 
   for (int i=0; i< numAvg; i++) {
-    delay(10);
+    delay(15);
     float echoCM = 0;
     if (sensorNum == 1) {
       echoCM = sonar1.ping_cm();
@@ -363,13 +330,15 @@ int MoveForward(float movInches) {
   // Calculate the distance in terms of encoder values, and once encoder value is reached must stop
   float L_encoderChange = int(movInches*L_encValPerInch); // positive
   float R_encoderChange = int(movInches*R_encValPerInch); // positive
-  int prev_posiL = posiL;
-  int prev_posiR = posiR;
+  
+  int prev_posiL = read_posL();
+  int prev_posiR = read_posR();
   
   if (movInches > 0.0) {
     // Move forward
-    while (posiL < prev_posiL+L_encoderChange && posiR < prev_posiR+R_encoderChange) {
-      RunPID(L_encoderChange, R_encoderChange);
+    while (read_posL() < prev_posiL+L_encoderChange && read_posR() < prev_posiR+R_encoderChange) {
+      setTargetsSmallStep(L_encoderChange, R_encoderChange);
+      RunPID();
       //LeftMotorForward();
       //RightMotorForward();
     }
@@ -377,8 +346,9 @@ int MoveForward(float movInches) {
     DisableMotors();
   } else {
     // Move backward
-    while (posiL > prev_posiL+L_encoderChange && posiR > prev_posiR+R_encoderChange) {
-      RunPID(L_encoderChange, R_encoderChange);
+    while (read_posL() > prev_posiL+L_encoderChange && read_posR() > prev_posiR+R_encoderChange) {
+      setTargetsSmallStep(L_encoderChange, R_encoderChange);
+      RunPID();
       //LeftMotorBackward();
       //RightMotorBackward();
     }
@@ -390,16 +360,21 @@ int MoveForward(float movInches) {
 }
 
 int Rotate(float rotDegrees) {
-  // Calculate the distance in terms of encoder values, and once encoder valueis reached must stop
-  float L_encoderChange = int((rotDegrees*L_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
-  float R_encoderChange = int((rotDegrees*R_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
-  int prev_posiL = posiL;
-  int prev_posiR = posiR;
   
   if (rotDegrees > 0.0) {
     // Turn right
-    while (posiL < prev_posiL+L_encoderChange && posiR > prev_posiR-R_encoderChange) {
-      RunPID(L_encoderChange, R_encoderChange);
+
+    // Calculate the distance in terms of encoder values, and once encoder valueis reached must stop
+    float L_encoderChange = int((rotDegrees*L_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
+    float R_encoderChange = int(-1*(rotDegrees*R_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
+    
+    
+    L_goal_pos = L_encoderChange + read_posL();
+    R_goal_pos = R_encoderChange + read_posR();
+
+    while (read_posL() < L_goal_pos && read_posR() > R_goal_pos) {
+      setTargetsSmallStep(L_encoderChange, R_encoderChange);
+      RunPID();
       //LeftMotorForward();
       //RightMotorBackward();                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
     }
@@ -407,8 +382,16 @@ int Rotate(float rotDegrees) {
     DisableMotors();
   } else {
     // Turn left
-    while (posiL > prev_posiL+L_encoderChange && posiR < prev_posiR-R_encoderChange) {
-      RunPID(L_encoderChange, R_encoderChange);
+
+    // Calculate the distance in terms of encoder values, and once encoder valueis reached must stop
+    float L_encoderChange = int(-1*(rotDegrees*L_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
+    float R_encoderChange = int((rotDegrees*R_encValPerInch*3.14159265359)/(20*2.54));     // henry's calculations for turning
+    L_goal_pos = L_encoderChange + read_posL();
+    R_goal_pos = R_encoderChange + read_posR();
+
+    while (read_posL() > L_goal_pos && read_posR() < R_goal_pos) {
+      setTargetsSmallStep(L_encoderChange, R_encoderChange);
+      RunPID();
       //LeftMotorBackward();
       //RightMotorForward();
     }
@@ -585,7 +568,6 @@ void CheckTurnClearance(void) {
       }
     }
   }
-
   
   // while left < side turn limit, do left adjustment
   // while right < side turn limit, do right adjustment
@@ -623,17 +605,60 @@ void CheckTurnClearance(void) {
   }
 }
 
-void RunPID(float L_enc_change, float R_enc_change) {
-  // enc values to move to
-  if (targetL<L_enc_change && targetR<R_enc_change) {
-    targetL = targetL + (L_enc_change);
-    targetR = targetR + (R_enc_change);
+int read_posL(void){
+  int pos = 0; 
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    pos = posiL;   // comes from encoder values caluclated in interrupts
   }
-  
+  return pos;
+}
+
+int read_posR(void){
+  int pos = 0; 
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    pos = posiR;   // comes from encoder values caluclated in interrupts
+  }
+  return pos;
+}
+
+void setTargetsSmallStep(float L_enc_change, float R_enc_change){
+  long currT = micros(); 
+  float deltaT = ((float) (currT - prevT_g))/( 1.0e6 );
+  prevT_g = currT;
+  float velocity = 0.25;
+  float pulsesPerMeter = 2400;
+
+  int Ldir = 1;
+  int Rdir = 1;
+  if (L_enc_change < 0){
+    Ldir = -1;
+  }
+  if (L_enc_change < 0){
+    Ldir = -1;
+  }
+  Serial.println("PRINTING TARGET!!!");
   Serial.print("Left Target: ");
   Serial.println(targetL);
   Serial.print("Right Target: ");
   Serial.println(targetR);
+  Serial.println("PRINTING TARGET!!!");
+  
+  targetL = targetL + (Ldir * deltaT * velocity * pulsesPerMeter);
+  targetR = targetR + (Rdir * deltaT * velocity * pulsesPerMeter );
+}
+  
+
+void RunPID() {
+  // enc values to move to
+  Serial.print("Left Target: ");
+  Serial.println(targetL);
+  Serial.print("Right Target: ");
+  Serial.println(targetR);
+
+  Serial.print("Left pos: ");
+  Serial.println(read_posL());
+  Serial.print("Right pos: ");
+  Serial.println(read_posR());
   
   // set positions steady to use in calcs
   int posR = 0; 
@@ -646,21 +671,66 @@ void RunPID(float L_enc_change, float R_enc_change) {
     posL = posiL;   // comes from encoder values calcuolated in interrupts
   }
 
-  motor_params right_motor;
+  motor_params right_motor;   
+  right_motor = calc_PID(posR, targetR, right_motor_PID_params);
   motor_params left_motor;
-  right_motor = calc_PID(posR, targetR*-1, right_motor_PID_params);
-  left_motor = calc_PID(posL, targetL, left_motor_PID_params);
+  left_motor = calc_PID(posL, targetL*-1, left_motor_PID_params);
+
+  // debug
   Serial.print("Right motor direction, speed: ");
   Serial.print(right_motor.dir);
+  Serial.print(", ");
   Serial.println(right_motor.pwr);
   Serial.print("Left motor direction, speed: ");
   Serial.print(left_motor.dir);
+  Serial.print(", ");
   Serial.println(left_motor.pwr);
 
   // signal the motor
   setMotor(right_motor.dir,right_motor.pwr,rightMotorPin,rightMotorIn1,rightMotorIn2);
   setMotor(left_motor.dir,left_motor.pwr,leftMotorPin,leftMotorIn1,leftMotorIn2);
 
+}
+
+motor_params calc_PID(int pos, int target, PID_params &params){
+  motor_params out;
+
+  long currT = micros();
+  float deltaT = ((float) (currT - params.prevT))/( 1.0e6 );
+  params.prevT = currT;
+
+  // error
+  int e = pos - target;
+
+  // derivative
+  float dedt = (e-params.eprev)/(deltaT);
+
+  // integral
+  params.eintegral = params.eintegral + e*deltaT;
+
+  // control signal
+  float u = params.kp*e + params.kd*dedt + params.ki*params.eintegral;
+  Serial.println(deltaT);
+  Serial.println(pos);
+  Serial.println(target);
+  Serial.println(u);
+
+  // motor power
+  float pwr = fabs(u);
+  if( pwr > 255 ){
+    pwr = 255;
+  } 
+
+  // motor direction
+  int dir = 1;
+  if(u<0){
+    dir = -1;
+  }
+  
+  out.dir = dir;
+  out.pwr = pwr;
+  
+  return out;
 }
 
 int MoveArm(float rotDegrees) {

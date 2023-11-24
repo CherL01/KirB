@@ -116,12 +116,12 @@ class ObstacleAvoidance():
 
         # split sensor readings and store in init variables
         # time.sleep(5)
-        for _ in range(3):
+        for _ in range(6):
             
             # get message from buffer
             message = PA.blocking_read()
 
-            # print('message: ', message)
+            print('message: ', message)
             
             try:
                 # print('message split: ', message.split('|')[1:8])
@@ -133,7 +133,7 @@ class ObstacleAvoidance():
             except ValueError:
                 self.get_sensor_readings()
 
-        print('\nsensor reading dict: ', self.sensor_label2reading_dict)
+        # print('\nsensor reading dict: ', self.sensor_label2reading_dict)
 
         # organize sensor readings in F, L, B, R order
         f = self.sensor_label2reading_dict['u0']
