@@ -99,8 +99,8 @@ class BlockDetection():
         A fine-tuned set of movements to move the arm, pick up the block, and hold the block up.
         '''
         
-        # move arm down, close gripper, move arm up
-        return ['a40', 'gc', 'a180']
+        # move arm down, move forward 0.5 inches, close gripper, move arm up
+        return ['a40', 'w0-0.5', 'gc', 'a180']
     
     def drop_off_block(self):
         ''' 
