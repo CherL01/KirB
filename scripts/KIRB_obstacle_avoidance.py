@@ -679,6 +679,44 @@ class ObstacleAvoidance():
 
         # block detected, will move so block is in pick up range
         print('moving to pick up block')
+
+        centering_turns = 0
+        initial_centering = True
+        while True:
+            # get sensor readings
+            sensor_list = self.get_sensor_readings()
+
+            # initial direction should be from prev loop
+            print('direction of turn: ', direction)
+            centered, commands = BD.check_centered(self.sensor_label2reading_dict, direction)
+
+            if centered is True:
+                print('block is centered!')
+                break
+
+            # block not centered, carry out movement commands
+            for command in commands:
+
+                print('command (centering): ', command)
+                self.move(command)
+
+            centering_turns += 1
+
+            if direction is 'L':
+                if centering_turns == 2 or initial_centering is True:
+                    centering_turns = 0
+                    direction = 'R'
+                    print('changed turn direction to: ', direction)
+
+            else: 
+                if centering_turns == 2 or initial_centering is True:
+                    centering_turns = 0
+                    direction = 'L'
+                    print('changed turn direction to: ', direction)
+
+            initial_centering = False
+
+
         while True:
             # get sensor readings
             sensor_list = self.get_sensor_readings()

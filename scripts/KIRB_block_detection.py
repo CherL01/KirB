@@ -18,6 +18,7 @@ class BlockDetection():
         
         self.prev_reading = None
         self.scan_direction = None
+        self.centered = False
 
         self.scan_angle = 3
 
@@ -55,6 +56,27 @@ class BlockDetection():
                 self.scan_direction = 'R'
                 return self.block_detected, [f'r0-{self.scan_angle}']
         
+    def check_centered(self, sensor_dict, direction):
+        '''
+        input: sensor dictionary from OA, rotate direction
+        output: True if block is centered for pick up, list of movement command (L/R)
+        '''
+
+        if self.prev_reading is not None and abs(sensor_dict['u6'] - self.prev_reading) < 0.5:
+            self.centered = True
+            return self.centered, ['']
+        
+        self.prev_reading = sensor_dict['u6']
+
+        if direction == 'L':
+            return self.centered, ['r0--1']
+
+        else: 
+            return self.centered, ['r0-1']
+    
+
+        
+    
     def check_clearance_to_block(self, sensor_dict):
         '''
         input: sensor dictionary from OA
