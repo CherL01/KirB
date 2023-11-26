@@ -210,72 +210,77 @@ class ObstacleAvoidance():
             elif sensor_list[0] < 48:
                 front_turn_limit = 38.5
         
-        while sensor_list[0] < front_turn_limit or sensor_list[2] < self.e_stop_limit:
+        while True:
 
-            print('\nnot enough clearance')
-            
-            print('front back turn limit: ', front_turn_limit)
-            print('sensor list: ', sensor_list)
-            
-            # if the front is too close, move back. if the back is too close, move up
-            if sensor_list[0] < front_turn_limit:
-                self.move("w0--1")
-                # self.parallel()
-            elif sensor_list[2] < self.e_stop_limit:
-                self.move("w0-0.75")
-                # self.parallel()
+            if sensor_list[0] < front_turn_limit or sensor_list[2] < self.e_stop_limit:
+
+                print('\nnot enough clearance')
                 
-            sensor_list = self.get_sensor_readings()
+                print('front back turn limit: ', front_turn_limit)
+                print('sensor list: ', sensor_list)
+                
+                # if the front is too close, move back. if the back is too close, move up
+                if sensor_list[0] < front_turn_limit:
+                    self.move("w0--1")
+                    # self.parallel()
+                elif sensor_list[2] < self.e_stop_limit:
+                    self.move("w0-0.75")
+                    # self.parallel()
                     
-            # no wall in front
-            if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
-                # if one tile ahead
-                if sensor_list[0] < 24:
-                    front_turn_limit = 14.5
-                # if two tiles ahead
-                elif sensor_list[0] < 36:
-                    front_turn_limit = 26.5
-                # if three tiles ahead
-                elif sensor_list[0] < 48:
-                    front_turn_limit = 38.5
-            else:
-                front_turn_limit = 2.0
+                sensor_list = self.get_sensor_readings()
+                        
+                # no wall in front
+                if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
+                    # if one tile ahead
+                    if sensor_list[0] < 24:
+                        front_turn_limit = 14.5
+                    # if two tiles ahead
+                    elif sensor_list[0] < 36:
+                        front_turn_limit = 26.5
+                    # if three tiles ahead
+                    elif sensor_list[0] < 48:
+                        front_turn_limit = 38.5
+                else:
+                    front_turn_limit = 2.0
 
-        while sensor_list[1] < sides_turn_limit or sensor_list[3] < sides_turn_limit:
-            print('not enough side clearance')
-            # if the sides are too close, adjust                
-            if sensor_list[1] < sides_turn_limit:
-                self.move('x')  # turn off parallel
-                self.move('r0--15')
-                self.move('w0--1')
-                self.move('r0-12')
-                self.move('w0-1')
-                # self.move('s')  # turn on parallel
-                # # self.parallel()
-            elif sensor_list[3] < sides_turn_limit:
-                self.move('x')  # turn off parallel
-                self.move('r0-15')
-                self.move('w0--1')
-                self.move('r0--12')
-                self.move('w0-1')
-                # self.move('s')  # turn on parallel
-                # # self.parallel()
-            
-            sensor_list = self.get_sensor_readings()
-                    
-            # no wall in front
-            if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
-                # if one tile ahead
-                if sensor_list[0] < 24:
-                    front_turn_limit = 14.5
-                # if two tiles ahead
-                elif sensor_list[0] < 36:
-                    front_turn_limit = 26.5
-                # if three tiles ahead
-                elif sensor_list[0] < 48:
-                    front_turn_limit = 38.5
+            if sensor_list[1] < sides_turn_limit or sensor_list[3] < sides_turn_limit:
+                print('not enough side clearance')
+                # if the sides are too close, adjust                
+                if sensor_list[1] < sides_turn_limit:
+                    self.move('x')  # turn off parallel
+                    self.move('r0--15')
+                    self.move('w0--1')
+                    self.move('r0-12')
+                    self.move('w0-0.75')
+                    # self.move('s')  # turn on parallel
+                    # # self.parallel()
+                elif sensor_list[3] < sides_turn_limit:
+                    self.move('x')  # turn off parallel
+                    self.move('r0-15')
+                    self.move('w0--1')
+                    self.move('r0--12')
+                    self.move('w0-0.75')
+                    # self.move('s')  # turn on parallel
+                    # # self.parallel()
+                
+                sensor_list = self.get_sensor_readings()
+                        
+                # no wall in front
+                if sensor_list[0] > (ML.wall_limit + ML.sensor_tolerance):
+                    # if one tile ahead
+                    if sensor_list[0] < 24:
+                        front_turn_limit = 14.5
+                    # if two tiles ahead
+                    elif sensor_list[0] < 36:
+                        front_turn_limit = 26.5
+                    # if three tiles ahead
+                    elif sensor_list[0] < 48:
+                        front_turn_limit = 38.5
+                else:
+                    front_turn_limit = 2.0
+
             else:
-                front_turn_limit = 2.0
+                break
                     
         cleared = True     
         print('cleared: ', cleared)
