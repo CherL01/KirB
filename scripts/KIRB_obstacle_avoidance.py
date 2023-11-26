@@ -702,7 +702,7 @@ class ObstacleAvoidance():
 
             centering_turns += 1
 
-            if direction is 'L':
+            if direction == 'L':
                 if centering_turns == 2 or initial_centering is True:
                     centering_turns = 0
                     direction = 'R'
