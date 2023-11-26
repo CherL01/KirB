@@ -577,7 +577,7 @@ void OpenGripper(void) {
   // this only sets the speed. To stop, use GripperServo.write(90)
   //To open
   GripperServo.write(65);   // calibrate
-  delay(400);
+  delay(200);
   GripperServo.write(90);
 }
 

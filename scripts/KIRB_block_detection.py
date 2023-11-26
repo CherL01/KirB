@@ -109,3 +109,5 @@ class BlockDetection():
         
         # move back 5 inches to give room, move arm down, open gripper, move back, move arm up
         return ['w0--5', 'a40', 'go', 'w0--1', 'a180']
+    
+    # blue, grey, brown, red (top to bot)
