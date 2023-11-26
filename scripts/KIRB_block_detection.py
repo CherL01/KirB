@@ -11,15 +11,19 @@ class BlockDetection():
         
         # initialize the difference limit between the front Top & Bot sensors
         ### CAN CHANGE
-        self.front_sensor_diff_limit = 4
+        self.front_sensor_diff_limit = 2.5
 
         # initialize that block is not within pick up range
         self.pick_up_range = False
         
         self.prev_reading = None
         self.scan_direction = None
+        self.centered = False
 
         self.scan_angle = 3
+
+        # initialize front/bot sensor diff due to placement of sensors
+        self.front_bot_diff = 0.5
     
     def get_front_bot_diff(self, sensor_dict):
         '''
@@ -27,7 +31,7 @@ class BlockDetection():
         output: difference between front/bot sensors
         '''
 
-        return sensor_dict['u0'] - sensor_dict['u6']
+        return sensor_dict['u0'] - (sensor_dict['u6'] + self.front_bot_diff)
     
     def scan_for_block(self, sensor_dict, direction):
         ''' 
@@ -52,6 +56,27 @@ class BlockDetection():
                 self.scan_direction = 'R'
                 return self.block_detected, [f'r0-{self.scan_angle}']
         
+    def check_centered(self, sensor_dict, direction):
+        '''
+        input: sensor dictionary from OA, rotate direction
+        output: True if block is centered for pick up, list of movement command (L/R)
+        '''
+
+        if self.prev_reading is not None and abs(sensor_dict['u6'] - self.prev_reading) < 0.5:
+            self.centered = True
+            return self.centered, ['']
+        
+        self.prev_reading = sensor_dict['u6']
+
+        if direction == 'L':
+            return self.centered, ['r0--1']
+
+        else: 
+            return self.centered, ['r0-1']
+    
+
+        
+    
     def check_clearance_to_block(self, sensor_dict):
         '''
         input: sensor dictionary from OA
@@ -96,8 +121,8 @@ class BlockDetection():
         A fine-tuned set of movements to move the arm, pick up the block, and hold the block up.
         '''
         
-        # move arm down, move forward, close gripper, move arm up
-        return ['a40', 'w0-1', 'gc', 'a180']
+        # move arm down, move forward 0.5 inches, close gripper, move arm up
+        return ['a40', 'w0-0.5', 'gc', 'a180']
     
     def drop_off_block(self):
         ''' 
