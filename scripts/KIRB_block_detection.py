@@ -20,6 +20,9 @@ class BlockDetection():
         self.scan_direction = None
 
         self.scan_angle = 3
+
+        # initialize front/bot sensor diff due to placement of sensors
+        self.front_bot_diff = 0.5
     
     def get_front_bot_diff(self, sensor_dict):
         '''
@@ -27,7 +30,7 @@ class BlockDetection():
         output: difference between front/bot sensors
         '''
 
-        return sensor_dict['u0'] - sensor_dict['u6']
+        return sensor_dict['u0'] - (sensor_dict['u6'] + self.front_bot_diff)
     
     def scan_for_block(self, sensor_dict, direction):
         ''' 
