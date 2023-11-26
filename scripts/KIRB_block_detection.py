@@ -11,7 +11,7 @@ class BlockDetection():
         
         # initialize the difference limit between the front Top & Bot sensors
         ### CAN CHANGE
-        self.front_sensor_diff_limit = 4
+        self.front_sensor_diff_limit = 2.5
 
         # initialize that block is not within pick up range
         self.pick_up_range = False
