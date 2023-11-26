@@ -637,8 +637,6 @@ class ObstacleAvoidance():
                 else:
                     direction = 'L'
                     
-                    
-
             # if current square is A2, start by scanning left
             elif current_square == 'A2':
 
@@ -650,11 +648,6 @@ class ObstacleAvoidance():
                 # if left sensor reads more than 20, scan right
                 else:
                     direction = 'R'
-                    # angle = 5 * turns
-                    # self.move(f'r0-{angle}')
-                    # self.move('w0-12')
-                    # self.move('r0--90')
-                    # turns = 0
 
             # run block detection
             print('direction: ', direction)
