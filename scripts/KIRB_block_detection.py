@@ -18,6 +18,8 @@ class BlockDetection():
         
         self.prev_reading = None
         self.scan_direction = None
+
+        self.scan_angle = 3
     
     def get_front_bot_diff(self, sensor_dict):
         '''
@@ -45,10 +47,10 @@ class BlockDetection():
         else:
             if direction == 'L':
                 self.scan_direction = 'L'
-                return self.block_detected, ['r0--5']
+                return self.block_detected, [f'r0--{self.scan_angle}']
             else:
                 self.scan_direction = 'R'
-                return self.block_detected, ['r0-5']
+                return self.block_detected, [f'r0-{self.scan_angle}']
         
     def check_clearance_to_block(self, sensor_dict):
         '''

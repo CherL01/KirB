@@ -617,13 +617,13 @@ class ObstacleAvoidance():
         print('scanning for block')
         turns = 0
         direction_changed = False
+        current_square = self.loading_zone_path[-1]
+        print('current square: ', current_square)
         while True:
 
             # get sensor readings and current square in loading zone
             sensor_list = self.get_sensor_readings()
-            current_square = self.loading_zone_path[-1]
             print('sensor list: ', sensor_list)
-            print('current square: ', current_square)
 
             # if current square is B1, start by scanning right
             if current_square == 'B1':
@@ -673,13 +673,13 @@ class ObstacleAvoidance():
                 
             if sensor_list[0] > 25:
                 if current_square == 'B1':
-                    angle = 90 - 5 * turns
+                    angle = 90 - BD.scan_angle * turns
                     self.move(f'r0-{angle}')
                     turns = 0
                     direction_changed = True
                     
                 else:
-                    angle = 90 - 5 * turns
+                    angle = 90 - BD.scan_angle * turns
                     self.move(f'r0--{angle}')
                     turns = 0
                     direction_changed = True
