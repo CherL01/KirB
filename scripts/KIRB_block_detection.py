@@ -98,7 +98,7 @@ class BlockDetection():
             
         self.prev_reading = sensor_dict['u6']
         
-        if sensor_dict['u6'] > 6: 
+        if sensor_dict['u6'] > 4.5: 
             return self.pick_up_range, ['w0-0.5']
         
         elif sensor_dict['u6'] < 4:

@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <NewPing.h>
 #include <Servo.h>
+#include <Adafruit_VL53L0X.h>
 
 //Define pins
 //SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
@@ -12,14 +13,14 @@
 #define TRIGGER_PIN4          51    // Right front
 #define TRIGGER_PIN5          52    // Right back
 #define TRIGGER_PIN6          53    // Back
-#define TRIGGER_PIN7          43    // Front bottom  // Doublecheck
+// #define TRIGGER_PIN7          43    // Front bottom  // Doublecheck
 #define ECHO_PIN1             8     // Front sensor
 #define ECHO_PIN2             9     // Left front
 #define ECHO_PIN3             10    // Left back
 #define ECHO_PIN4             11    // Right front
 #define ECHO_PIN5             12    // Right back
 #define ECHO_PIN6             13    // Back
-#define ECHO_PIN7             6     // Front bottom  // Doublecheck
+// #define ECHO_PIN7             6     // Front bottom  // Doublecheck
 #define MaxDistance           200
 
 NewPing sonar1(TRIGGER_PIN1, ECHO_PIN1, MaxDistance);
@@ -28,7 +29,13 @@ NewPing sonar3(TRIGGER_PIN3, ECHO_PIN3, MaxDistance);
 NewPing sonar4(TRIGGER_PIN4, ECHO_PIN4, MaxDistance);
 NewPing sonar5(TRIGGER_PIN5, ECHO_PIN5, MaxDistance);
 NewPing sonar6(TRIGGER_PIN6, ECHO_PIN6, MaxDistance);
-NewPing sonar7(TRIGGER_PIN7, ECHO_PIN7, MaxDistance);
+// NewPing sonar7(TRIGGER_PIN7, ECHO_PIN7, MaxDistance);
+
+Adafruit_VL53L0X tofSensor = Adafruit_VL53L0X();
+#define TOF_ADDRESS           0x29  
+#define TOF_SDA               20    // TOF sensor i2c data
+#define TOF_SCL               21    // TOF sensor i2c clock
+VL53L0X_RangingMeasurementData_t measure;
 
 // LED pins
 int R_LED = 40;
@@ -100,6 +107,9 @@ void setup() {
   
   // Initialize Serial communication
   Serial.begin(9600);
+  // Initialize time of flight sensor i2c
+  tofSensor.begin();
+  
   //Serial.println("Enter AT commands:");
   // HC-05 default speed in AT command mode 
 //  BTSerial.begin(9600); 
@@ -290,8 +300,6 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
       echoCM = sonar5.ping_cm();
     } else if (sensorNum == 6) {
       echoCM = sonar6.ping_cm();
-    } else if (sensorNum == 7) {
-      echoCM = sonar7.ping_cm();
     }
     tempVal+= echoCM/2.54;    // sensor values -> convert to inches
   }
@@ -301,13 +309,21 @@ float ReadUltrasonicSensor(int sensorNum, int numAvg) {
 int GetAllSensorReadings(float numAvg) {
   //get all sensor readings at once (with command ua)
   strBuffer = "";
-  for (int i=0; i<7; i++) {
+  for (int i=0; i<6; i++) {
     distanceBuffer[i] = ReadUltrasonicSensor(i+1, numAvg);
     strBuffer += " | ";
     strBuffer += (String)i;
     strBuffer += "=";
     strBuffer += distanceBuffer[i];
   }
+
+  // TOF sensor
+  tofSensor.rangingTest(&measure, true);
+  
+  float tof_measurement = measure.RangeMilliMeter/25.4;   // read distance in mm, convert to inches
+  strBuffer += " | 6=";
+  strBuffer += tof_measurement;
+  
   // Send sensor values to OA code -> in order 0.front, 1.left-front, 2.left-back, 3.right-front, 4.right-back, 5. back, 6.front-bottom
   Serial.println(strBuffer);              // sends this back to python 
 }
