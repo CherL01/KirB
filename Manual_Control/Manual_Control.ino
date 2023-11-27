@@ -585,7 +585,7 @@ int MoveArm(float rotDegrees) {
   
   ArmServo.write(rotDegrees); // sets the servo position according to the scaled value
 
-  delay(2000);                // waits for the servo to get there
+  delay(1800);                // waits for the servo to get there
   return rotDegrees;
 }
 
@@ -601,6 +601,6 @@ void CloseGripper(void) {
   // this only sets the speed. To stop, use GripperServo.write(90)
   //To close
   GripperServo.write(115);     // close
-  delay(2000);              // closed?
+  delay(2500);              // closed?
   GripperServo.write(90);   // might not need to stop, keep "closing" to hold grip
 }
