@@ -34,8 +34,8 @@ class ObstacleAvoidance():
                         'RT': [f'r0-{self.right_turn_angle}'],
                         'F': [f'w0-{self.travel_distance}'],
                         'B': [f'w0--{self.travel_distance}'],
-                        'L': [f'r0--{self.left_turn_angle}', 'w0-12'],
-                        'R': [f'r0-{self.right_turn_angle}', 'w0-12'],}
+                        'L': [f'r0--{self.left_turn_angle}', f'w0-{self.travel_distance}'],
+                        'R': [f'r0-{self.right_turn_angle}', f'w0-{self.travel_distance}'],}
 
         #initialize sensor difference and limit and preset values
         self.left_sensor_difference = 0
@@ -141,6 +141,9 @@ class ObstacleAvoidance():
                     # print("label/reading: ", label, reading)
                     self.sensor_label2reading_dict[f'u{int(label)}'] = float(reading)
 
+                if self.sensor_label2reading_dict['u0'] == 0:
+                    self.get_sensor_readings()
+
             except ValueError:
                 self.get_sensor_readings()
 
@@ -223,10 +226,14 @@ class ObstacleAvoidance():
                 print('front back turn limit: ', front_turn_limit)
                 print('sensor list: ', sensor_list)
                 
-                # if the front is too close, move back. if the back is too close, move up
+                # if the front is too close, move back. if the back is too close, move up. if too far from front, move up a bit
                 if sensor_list[0] < front_turn_limit:
                     self.move("w0--1")
                     # self.parallel()
+
+                elif front_turn_limit == 2.0 and sensor_list[0] > 3.54:
+                    self.move("w0-0.5")
+
                 elif sensor_list[2] < self.e_stop_limit:
                     self.move("w0-0.75")
                     # self.parallel()
@@ -418,7 +425,7 @@ class ObstacleAvoidance():
                 break
             # print('\nattempt to run parallel')
             print('\nattempt to go straight')
-            self.move('w0-4')
+            self.move('w0-2.75')
             # self.parallel(initial=True)
 
         print('localizable square found!')
@@ -697,6 +704,9 @@ class ObstacleAvoidance():
 
                 print('command (during block detection): ', command)
                 self.move(command)
+
+            if turns > 15:
+                direction_changed = True
                 
             # if sensor_list[0] > 25:
             #     if current_square == 'B1':
@@ -730,9 +740,9 @@ class ObstacleAvoidance():
             print('previous reading: ', BD.prev_reading)
             centered, commands = BD.check_centered(self.sensor_label2reading_dict, direction)
 
-            # if centered is True:
-            #     print('block is centered!')
-            #     break
+            if centered is True:
+                print('block is centered!')
+                break
 
             # block not centered, carry out movement commands
             for command in commands:
@@ -740,14 +750,14 @@ class ObstacleAvoidance():
                 print('command (centering): ', command)
                 self.move(command)
 
-            if centered is True:
-                print('block is centered!')
-                break
+            # if centered is True:
+            #     print('block is centered!')
+            #     break
 
             centering_turns += 1
 
             # if turned 4 times already, change directions
-            if centering_turns == 4:
+            if centering_turns == 2:
 
                 if direction == 'L':
                     centering_turns = 0
@@ -781,6 +791,9 @@ class ObstacleAvoidance():
 
                 print('command (moving to pick up range): ', command)
                 self.move(command)
+
+            if abs(self.sensor_label2reading_dict['u0'] - self.sensor_label2reading_dict['u6']) < 0.2:
+                self.block_detect_and_move()
                 
         # # make sure it is still centered
         # print('\ncentering again before pick up')
@@ -824,7 +837,7 @@ class ObstacleAvoidance():
 
         # block is in range, pick up block
         print('picking up block...')
-        commands = BD.pick_up_block()
+        commands = BD.pick_up_block(current_square)
 
         for command in commands:
 
@@ -854,7 +867,7 @@ class ObstacleAvoidance():
         print('complete')
 
 
-drop_off_loc = 'C3'
+drop_off_loc = 'A6'
 testing = False
 
 OA = ObstacleAvoidance()
@@ -868,14 +881,11 @@ OA.localize_and_navigate('loading zone')
 # start block detection
 if testing is True:
     OA.loading_zone_path = ['B1']
+    ML.loading_zone = True
 OA.block_detect_and_move()
 
 # renavigate to a localizable square
 OA.initial_navigation()
-
-# # # milestone 2
-# # ML.initial = False
-# # ML.localized = True
 
 # tries to localize then travel to drop off zone
 OA.localize_and_navigate('drop off zone', drop_off_loc)

@@ -21,7 +21,10 @@ class BlockDetection():
         self.centered = False
 
         self.scan_angle = 4
-        self.bot_limit = 10
+        self.bot_limit = 14
+        self.scan_turns = 0
+
+        # self.initial_scan = True
 
         # initialize front/bot sensor diff due to placement of sensors
         self.front_bot_diff = 0.5
@@ -53,9 +56,11 @@ class BlockDetection():
         else:
             if direction == 'L':
                 self.scan_direction = 'L'
+                self.scan_turns += 1
                 return self.block_detected, [f'r0--{self.scan_angle}']
             else:
                 self.scan_direction = 'R'
+                self.scan_turns += 1
                 return self.block_detected, [f'r0-{self.scan_angle}']
         
     def check_centered(self, sensor_dict, direction):
@@ -75,10 +80,10 @@ class BlockDetection():
         self.prev_reading = sensor_dict['u6']
 
         if direction == 'L':
-            return self.centered, ['r0--3']
+            return self.centered, ['r0--2']
 
         else: 
-            return self.centered, ['r0-3']
+            return self.centered, ['r0-2']
     
     def check_clearance_to_block(self, sensor_dict):
         '''
@@ -101,7 +106,7 @@ class BlockDetection():
             
         self.prev_reading = sensor_dict['u6']
         
-        if sensor_dict['u6'] > 5: 
+        if sensor_dict['u6'] > 4.75: 
             return self.pick_up_range, ['w0-0.5']
         
         elif sensor_dict['u6'] < 4.25:
@@ -135,7 +140,7 @@ class BlockDetection():
         
     #     return movements
         
-    def pick_up_block(self):
+    def pick_up_block(self, current_square):
         ''' 
         input: self
         output: list of commands to pick up block
@@ -144,7 +149,17 @@ class BlockDetection():
         '''
         
         # move arm down, move forward 0.5 inches, close gripper, move arm up
-        return ['a40', 'w0-0.5', 'gc', 'a180']
+        pick_up_commands = ['a40', 'w0-0.5', 'gc', 'a180']
+
+        if current_square == 'B1':
+            angle = 4 * self.scan_turns
+            pick_up_commands.append(f'r0--{angle}')
+
+        else:
+            angle = 4 * self.scan_turns
+            pick_up_commands.append(f'r0-{angle}')
+
+        return pick_up_commands
     
     def drop_off_block(self):
         ''' 
