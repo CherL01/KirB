@@ -64,18 +64,21 @@ class BlockDetection():
         output: True if block is centered for pick up, list of movement command (L/R)
         '''
 
-        if self.prev_reading is not None and abs(sensor_dict['u6'] - self.prev_reading) < 0.75:
+        if self.prev_reading is None:
+            self.centered = False
+
+        if self.prev_reading is not None and abs(sensor_dict['u6'] - self.prev_reading) < 0.5:
             self.centered = True
             self.prev_reading = None
-            return self.centered, ['']
+            # return self.centered, ['']
         
         self.prev_reading = sensor_dict['u6']
 
         if direction == 'L':
-            return self.centered, ['r0--2']
+            return self.centered, ['r0--3']
 
         else: 
-            return self.centered, ['r0-2']
+            return self.centered, ['r0-3']
     
     def check_clearance_to_block(self, sensor_dict):
         '''
@@ -91,17 +94,17 @@ class BlockDetection():
             print("can't find block anymore")
             if self.scan_direction == 'L':
                 self.prev_reading = None
-                return self.pick_up_range, ['r0--3']
+                return self.pick_up_range, ['r0--2']
             else: 
                 self.prev_reading = None
-                return self.pick_up_range, ['r0-3']
+                return self.pick_up_range, ['r0-2']
             
         self.prev_reading = sensor_dict['u6']
         
-        if sensor_dict['u6'] > 4.5: 
+        if sensor_dict['u6'] > 5: 
             return self.pick_up_range, ['w0-0.5']
         
-        elif sensor_dict['u6'] < 4:
+        elif sensor_dict['u6'] < 4.25:
             return self.pick_up_range, ['w0--0.5']
         
         else:
@@ -113,24 +116,24 @@ class BlockDetection():
         #     self.pick_up_range = True
         #     return self.pick_up_range, ['']
         
-    def calculate_movements(self, sensor_dict, direction):
-        '''
-        input: sensor dict from OA, direction of movement
-        output: list of movements
-        '''
+    # def calculate_movements(self, sensor_dict, direction):
+    #     '''
+    #     input: sensor dict from OA, direction of movement
+    #     output: list of movements
+    #     '''
         
-        movements = []
-        bot_distance = sensor_dict['u6']
+    #     movements = []
+    #     bot_distance = sensor_dict['u6']
         
-        if direction == 'L':
-            movements.append('r0--1')
-        else:
-            movements.append('r0-1')
+    #     if direction == 'L':
+    #         movements.append('r0--1')
+    #     else:
+    #         movements.append('r0-1')
             
-        travel_distance = math.floor(bot_distance - 5)
-        movements.append(f'w0-{travel_distance}')
+    #     travel_distance = math.floor(bot_distance - 5)
+    #     movements.append(f'w0-{travel_distance}')
         
-        return movements
+    #     return movements
         
     def pick_up_block(self):
         ''' 

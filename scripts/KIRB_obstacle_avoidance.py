@@ -5,7 +5,7 @@ from KIRB_python_arduino import PyArduino
 from KIRB_localization import MazeLocalization
 from KIRB_block_detection import BlockDetection
 
-PA = PyArduino(com_port="COM7")
+PA = PyArduino(com_port="COM4")
 ML = MazeLocalization()
 BD = BlockDetection()
 
@@ -29,10 +29,11 @@ class ObstacleAvoidance():
         # initialize movement command dict
         self.left_turn_angle = 95
         self.right_turn_angle = 90
+        self.travel_distance = 11.75
         self.mov_dict = {'LT': [f'r0--{self.left_turn_angle}'],
                         'RT': [f'r0-{self.right_turn_angle}'],
-                        'F': ['w0-12'],
-                        'B': ['w0--12'],
+                        'F': [f'w0-{self.travel_distance}'],
+                        'B': [f'w0--{self.travel_distance}'],
                         'L': [f'r0--{self.left_turn_angle}', 'w0-12'],
                         'R': [f'r0-{self.right_turn_angle}', 'w0-12'],}
 
@@ -44,6 +45,7 @@ class ObstacleAvoidance():
         self.square_dim = 12
         self.forward_limit = 2.8
         self.loading_zone_path = None
+        self.prev_square = None
 
     def detect_wall(self, reading):
         '''
@@ -77,11 +79,13 @@ class ObstacleAvoidance():
 
             # if back wall detected
             if self.detect_wall(back_sensor):
+                print('back wall detected, turning right')
                 self.move('r0-90')
                 return False
             
             elif ML.loading_zone is True:
                 if sensor_list[1] < ML.wall_limit or sensor_list[3] < ML.wall_limit:
+                    print('in an L shaped square, ready to localize!')
                     return True
                 else:
                     self.move('r0-90')
@@ -455,7 +459,7 @@ class ObstacleAvoidance():
                     print('changed sensor list: ', sensors_list)
 
                 elif ML.loading_zone is True:
-                    print('in A1 (W), did not change sensor values')
+                    print('could be in A1 (W), did not change sensor values')
 
             # if in D6, S OR A1, N:
             elif (sensors_list[1] < ML.wall_limit) and (sensors_list[3] > 37): # (36 < sensors_list[2] < 42) and 
@@ -465,7 +469,7 @@ class ObstacleAvoidance():
                     print('changed sensor list: ', sensors_list)
 
                 elif ML.loading_zone is True:
-                    print('in A1 (N), did not change sensor values')
+                    print('could be in A1 (N), did not change sensor values')
 
             # if in D6, E:
             elif (sensors_list[3] < ML.wall_limit) and (sensors_list[1] > 26) and (sensors_list[2] > 30):
@@ -545,6 +549,11 @@ class ObstacleAvoidance():
                 # print('start parallel')
                 # self.move('s')
 
+                # turn off parallel at 4 way intersection
+                if self.prev_square == 'B6':
+                    print('at 4 way, turning off parallel')
+                    self.move('x')
+
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
@@ -552,7 +561,14 @@ class ObstacleAvoidance():
                     print('command (during navigation): ', command)
                     self.move(command)
 
+                # turn on parallel after 4 way intersection
+                if self.prev_square == 'B6':
+                    print('leaving 4 way, turning on parallel')
+                    self.move('start')
+
                 sensors_list = self.get_sensor_readings()
+
+                self.prev_square = square
 
                 # # check wall locations, turn off parallel if at 3 or 4 way intersection
                 # wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
@@ -579,6 +595,11 @@ class ObstacleAvoidance():
                 # print('start parallel')
                 # self.move('s')
 
+                # turn off parallel at 4 way intersection
+                if self.prev_square == 'B6':
+                    print('at 4 way, turning off parallel')
+                    self.move('x')
+
                 command_ard = self.convert_command(command_nav[0])
 
                 for command in command_ard:
@@ -586,7 +607,14 @@ class ObstacleAvoidance():
                     print('command (during navigation): ', command)
                     self.move(command)
 
+                # turn on parallel after 4 way intersection
+                if self.prev_square == 'B6':
+                    print('leaving 4 way, turning on parallel')
+                    self.move('start')
+
                 sensors_list = self.get_sensor_readings()
+
+                self.prev_square = square
 
                 # # check wall locations, turn off parallel if at 3 or 4 way intersection
                 # wall_locs = [1 if sensor_value <= ML.wall_limit else 0 for sensor_value in sensors_list]
@@ -670,18 +698,18 @@ class ObstacleAvoidance():
                 print('command (during block detection): ', command)
                 self.move(command)
                 
-            if sensor_list[0] > 25:
-                if current_square == 'B1':
-                    angle = 90 - BD.scan_angle * turns
-                    self.move(f'r0-{angle}')
-                    turns = 0
-                    direction_changed = True
+            # if sensor_list[0] > 25:
+            #     if current_square == 'B1':
+            #         angle = 90 - BD.scan_angle * turns
+            #         self.move(f'r0-{angle}')
+            #         turns = 0
+            #         direction_changed = True
                     
-                else:
-                    angle = 90 - BD.scan_angle * turns
-                    self.move(f'r0--{angle}')
-                    turns = 0
-                    direction_changed = True
+            #     else:
+            #         angle = 90 - BD.scan_angle * turns
+            #         self.move(f'r0--{angle}')
+            #         turns = 0
+            #         direction_changed = True
                     
         # ### TESTING (DID NOT WORK:(( )
         # movements = BD.calculate_movements(self.sensor_label2reading_dict, direction)
@@ -702,9 +730,9 @@ class ObstacleAvoidance():
             print('previous reading: ', BD.prev_reading)
             centered, commands = BD.check_centered(self.sensor_label2reading_dict, direction)
 
-            if centered is True:
-                print('block is centered!')
-                break
+            # if centered is True:
+            #     print('block is centered!')
+            #     break
 
             # block not centered, carry out movement commands
             for command in commands:
@@ -712,10 +740,14 @@ class ObstacleAvoidance():
                 print('command (centering): ', command)
                 self.move(command)
 
+            if centered is True:
+                print('block is centered!')
+                break
+
             centering_turns += 1
 
-            # if turned 2 times already, change directions
-            if centering_turns == 2:
+            # if turned 4 times already, change directions
+            if centering_turns == 4:
 
                 if direction == 'L':
                     centering_turns = 0
@@ -750,42 +782,45 @@ class ObstacleAvoidance():
                 print('command (moving to pick up range): ', command)
                 self.move(command)
                 
-        # make sure it is still centered
-        print('\ncentering again before pick up')
-        centering_turns = 0
-        initial_centering = True
-        while True:
-            # get sensor readings
-            sensor_list = self.get_sensor_readings()
+        # # make sure it is still centered
+        # print('\ncentering again before pick up')
+        # centering_turns = 0
+        # while True:
+        #     # get sensor readings
+        #     sensor_list = self.get_sensor_readings()
 
-            # initial direction should be from prev loop
-            print('direction of turn: ', direction)
-            centered, commands = BD.check_centered(self.sensor_label2reading_dict, direction)
+        #     # initial direction should be from prev loop
+        #     print('direction of turn: ', direction)
+        #     centered, commands = BD.check_centered(self.sensor_label2reading_dict, direction)
 
-            if centered is True:
-                print('block is centered!')
-                break
+        #     # if centered is True:
+        #     #     print('block is centered!')
+        #     #     break
 
-            # block not centered, carry out movement commands
-            for command in commands:
+        #     # block not centered, carry out movement commands
+        #     for command in commands:
 
-                print('command (centering): ', command)
-                self.move(command)
+        #         print('command (centering): ', command)
+        #         self.move(command)
 
-            centering_turns += 1
+        #     if centered is True:
+        #         print('block is centered!')
+        #         break
+
+        #     centering_turns += 1
             
-            # if turned 2 times already, change directions
-            if centering_turns == 2:
+        #     # if turned 4 times already, change directions
+        #     if centering_turns == 4:
 
-                if direction == 'L':
-                    centering_turns = 0
-                    direction = 'R'
-                    print('changed turn direction to: ', direction)
+        #         if direction == 'L':
+        #             centering_turns = 0
+        #             direction = 'R'
+        #             print('changed turn direction to: ', direction)
 
-                else:
-                    centering_turns = 0
-                    direction = 'L'
-                    print('changed turn direction to: ', direction)
+        #         else:
+        #             centering_turns = 0
+        #             direction = 'L'
+        #             print('changed turn direction to: ', direction)
 
         # block is in range, pick up block
         print('picking up block...')
@@ -819,29 +854,31 @@ class ObstacleAvoidance():
         print('complete')
 
 
-drop_off_loc = 'A6'
+drop_off_loc = 'C3'
+testing = False
 
 OA = ObstacleAvoidance()
 
-# # # navigates to a localizable square
-# OA.initial_navigation()
+# # navigates to a localizable square
+OA.initial_navigation()
 
-# # # tries to localize then travel to loading zone
-# OA.localize_and_navigate('loading zone')
+# # tries to localize then travel to loading zone
+OA.localize_and_navigate('loading zone')
 
 # start block detection
-OA.loading_zone_path = ['A2']
+if testing is True:
+    OA.loading_zone_path = ['B1']
 OA.block_detect_and_move()
 
-# # renavigate to a localizable square
-# OA.initial_navigation()
+# renavigate to a localizable square
+OA.initial_navigation()
 
-# # # # milestone 2
-# # # ML.initial = False
-# # # ML.localized = True
+# # # milestone 2
+# # ML.initial = False
+# # ML.localized = True
 
-# # tries to localize then travel to drop off zone
-# OA.localize_and_navigate('drop off zone', drop_off_loc)
+# tries to localize then travel to drop off zone
+OA.localize_and_navigate('drop off zone', drop_off_loc)
 
-# # # drop off block
-# OA.block_drop_off()
+# # drop off block
+OA.block_drop_off()
