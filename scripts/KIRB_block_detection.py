@@ -21,7 +21,7 @@ class BlockDetection():
         self.centered = False
 
         self.scan_angle = 4
-        self.bot_limit = 14
+        self.bot_limit = 12.5
         self.scan_turns = 0
 
         # self.initial_scan = True
@@ -80,10 +80,10 @@ class BlockDetection():
         self.prev_reading = sensor_dict['u6']
 
         if direction == 'L':
-            return self.centered, ['r0--2']
+            return self.centered, ['r0--1.5']
 
         else: 
-            return self.centered, ['r0-2']
+            return self.centered, ['r0-1.5']
     
     def check_clearance_to_block(self, sensor_dict):
         '''
@@ -149,14 +149,14 @@ class BlockDetection():
         '''
         
         # move arm down, move forward 0.5 inches, close gripper, move arm up
-        pick_up_commands = ['a40', 'w0-0.5', 'gc', 'a180']
+        pick_up_commands = ['a32', 'w0-1', 'gc', 'a180', 'gx']
 
         if current_square == 'B1':
             angle = 4 * self.scan_turns
             pick_up_commands.append(f'r0--{angle}')
 
         else:
-            angle = 4 * self.scan_turns
+            angle = 4 * self.scan_turns + 15
             pick_up_commands.append(f'r0-{angle}')
 
         return pick_up_commands

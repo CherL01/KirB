@@ -59,6 +59,7 @@ void CheckTurnClearance(void);
 int MoveArm(float rotDegrees);
 void OpenGripper(void);
 void CloseGripper(void);
+void TurnOffGripper(void);
 bool Start = false;
 
 int Rotate(float rotDegrees);
@@ -182,6 +183,8 @@ void loop() {
         OpenGripper();
       } else if (cmdStr.charAt(0) == 'c') {
         CloseGripper();
+      } else if (cmdStr.charAt(0) == 'x') {
+        TurnOffGripper();
       }
       
     } else if (cmdStr.charAt(0) == 's') {
@@ -602,5 +605,8 @@ void CloseGripper(void) {
   //To close
   GripperServo.write(115);     // close
   delay(2500);              // closed?
-  GripperServo.write(90);   // might not need to stop, keep "closing" to hold grip
+}
+
+void TurnOffGripper(void) {
+  GripperServo.write(90);
 }

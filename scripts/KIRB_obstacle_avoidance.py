@@ -5,7 +5,7 @@ from KIRB_python_arduino import PyArduino
 from KIRB_localization import MazeLocalization
 from KIRB_block_detection import BlockDetection
 
-PA = PyArduino(com_port="COM4")
+PA = PyArduino(com_port="COM7")
 ML = MazeLocalization()
 BD = BlockDetection()
 
@@ -260,17 +260,17 @@ class ObstacleAvoidance():
                 if sensor_list[1] < sides_turn_limit:
                     self.move('x')  # turn off parallel
                     self.move('r0--20')
-                    self.move('w0--1')
+                    self.move('w0--1.5')
                     self.move('r0-20')
-                    self.move('w0-0.75')
+                    self.move('w0-1.25')
                     # self.move('s')  # turn on parallel
                     # # self.parallel()
                 elif sensor_list[3] < sides_turn_limit:
                     self.move('x')  # turn off parallel
                     self.move('r0-20')
-                    self.move('w0--1')
+                    self.move('w0--1.5')
                     self.move('r0--20')
-                    self.move('w0-0.75')
+                    self.move('w0-1.25')
                     # self.move('s')  # turn on parallel
                     # # self.parallel()
                 
@@ -658,6 +658,7 @@ class ObstacleAvoidance():
         print('scanning for block')
         turns = 0
         direction_changed = False
+        BD.block_detected = False
         current_square = self.loading_zone_path[-1]
         print('current square: ', current_square)
         while True:
@@ -708,6 +709,23 @@ class ObstacleAvoidance():
             if turns > 15:
                 direction_changed = True
                 
+                if current_square == 'A2':
+                    self.move('r0--10')
+                    self.move('s')
+                    self.move('w0-11')
+                    self.move('r0-75')
+                    self.move('x')
+                    turns = 0
+                    
+                else:
+                    self.move('r0-10')
+                    self.move('s')
+                    self.move('w0-11')
+                    self.move('r0--75')
+                    self.move('x')
+                    turns = 0
+                    
+                
             # if sensor_list[0] > 25:
             #     if current_square == 'B1':
             #         angle = 90 - BD.scan_angle * turns
@@ -757,7 +775,7 @@ class ObstacleAvoidance():
             centering_turns += 1
 
             # if turned 4 times already, change directions
-            if centering_turns == 2:
+            if centering_turns == 3:
 
                 if direction == 'L':
                     centering_turns = 0
@@ -880,7 +898,7 @@ OA.localize_and_navigate('loading zone')
 
 # start block detection
 if testing is True:
-    OA.loading_zone_path = ['B1']
+    OA.loading_zone_path = ['A2']
     ML.loading_zone = True
 OA.block_detect_and_move()
 
