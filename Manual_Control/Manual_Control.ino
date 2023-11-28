@@ -114,7 +114,7 @@ void setup() {
   // Initialize time of flight sensor i2c
   Wire.begin();
   tofSensor.init();
-  tofSensor.setTimeout(50);
+  tofSensor.setTimeout(500);
   tofSensor.startContinuous();
 
 //  Adafruit
@@ -403,7 +403,7 @@ void LeftMotorForward(void) {
   // left motor rotates forward
   digitalWrite(leftMotorIn3, HIGH);
   digitalWrite(leftMotorIn4, LOW);
-  analogWrite(leftMotorPin, LmotorSpeed);
+  analogWrite(leftMotorPin, LmotorSpeed+3);
   //delay(1000);
 }
 
@@ -411,7 +411,7 @@ void LeftMotorBackward(void) {
   // left motor rotates backward
   digitalWrite(leftMotorIn3, LOW);
   digitalWrite(leftMotorIn4, HIGH);
-  analogWrite(leftMotorPin, LmotorSpeed-6);
+  analogWrite(leftMotorPin, LmotorSpeed-8);
   //delay(1000);
 }
 

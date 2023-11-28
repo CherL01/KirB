@@ -678,6 +678,7 @@ class ObstacleAvoidance():
                 # if right sensor reads more than 20, scan left
                 else:
                     direction = 'L'
+                    turns += 1
                     
             # if current square is A2, start by scanning left
             elif current_square == 'A2':
@@ -690,6 +691,7 @@ class ObstacleAvoidance():
                 # if left sensor reads more than 20, scan right
                 else:
                     direction = 'R'
+                    turns += 1
 
             # run block detection
             print('direction: ', direction)
@@ -705,9 +707,13 @@ class ObstacleAvoidance():
 
                 print('command (during block detection): ', command)
                 self.move(command)
+                
+            print('number of turns (during scanning): ', turns)
 
             if turns > 15:
                 direction_changed = True
+                
+                print('cant find block, gonna move')
                 
                 if current_square == 'A2':
                     self.move('r0--10')
@@ -756,6 +762,7 @@ class ObstacleAvoidance():
             # initial direction should be from prev loop
             print('direction of turn: ', direction)
             print('previous reading: ', BD.prev_reading)
+            print('previous previous reading: ', BD.prev_prev_reading)
             centered, commands = BD.check_centered(self.sensor_label2reading_dict, direction)
 
             if centered is True:
@@ -774,7 +781,7 @@ class ObstacleAvoidance():
 
             centering_turns += 1
 
-            # if turned 4 times already, change directions
+            # if turned 3 times already, change directions
             if centering_turns == 3:
 
                 if direction == 'L':
@@ -813,8 +820,8 @@ class ObstacleAvoidance():
             if abs(self.sensor_label2reading_dict['u0'] - self.sensor_label2reading_dict['u6']) < 0.2:
                 self.block_detect_and_move()
                 
-        # # make sure it is still centered
-        # print('\ncentering again before pick up')
+        # # check if block is centered
+        # print('\nrecentering after moving')
         # centering_turns = 0
         # while True:
         #     # get sensor readings
@@ -822,11 +829,13 @@ class ObstacleAvoidance():
 
         #     # initial direction should be from prev loop
         #     print('direction of turn: ', direction)
+        #     print('previous reading: ', BD.prev_reading)
+        #     print('previous previous reading: ', BD.prev_prev_reading)
         #     centered, commands = BD.check_centered(self.sensor_label2reading_dict, direction)
 
-        #     # if centered is True:
-        #     #     print('block is centered!')
-        #     #     break
+        #     if centered is True:
+        #         print('block is centered!')
+        #         break
 
         #     # block not centered, carry out movement commands
         #     for command in commands:
@@ -834,14 +843,14 @@ class ObstacleAvoidance():
         #         print('command (centering): ', command)
         #         self.move(command)
 
-        #     if centered is True:
-        #         print('block is centered!')
-        #         break
+        #     # if centered is True:
+        #     #     print('block is centered!')
+        #     #     break
 
         #     centering_turns += 1
-            
+
         #     # if turned 4 times already, change directions
-        #     if centering_turns == 4:
+        #     if centering_turns == 3:
 
         #         if direction == 'L':
         #             centering_turns = 0
@@ -890,23 +899,23 @@ testing = False
 
 OA = ObstacleAvoidance()
 
-# # navigates to a localizable square
+# # # navigates to a localizable square
 OA.initial_navigation()
 
-# # tries to localize then travel to loading zone
+# # # tries to localize then travel to loading zone
 OA.localize_and_navigate('loading zone')
 
 # start block detection
 if testing is True:
-    OA.loading_zone_path = ['A2']
+    OA.loading_zone_path = ['B1']
     ML.loading_zone = True
 OA.block_detect_and_move()
 
 # renavigate to a localizable square
 OA.initial_navigation()
 
-# tries to localize then travel to drop off zone
+# # tries to localize then travel to drop off zone
 OA.localize_and_navigate('drop off zone', drop_off_loc)
 
-# # drop off block
+# # # drop off block
 OA.block_drop_off()

@@ -17,6 +17,7 @@ class BlockDetection():
         self.pick_up_range = False
         
         self.prev_reading = None
+        self.prev_prev_reading = None
         self.scan_direction = None
         self.centered = False
 
@@ -72,18 +73,27 @@ class BlockDetection():
         if self.prev_reading is None:
             self.centered = False
 
-        if self.prev_reading is not None and abs(sensor_dict['u6'] - self.prev_reading) < 0.5:
+        if self.prev_prev_reading is not None and abs(sensor_dict['u6'] - self.prev_reading) < 0.75 and abs(self.prev_prev_reading - self.prev_reading) < 0.75:
             self.centered = True
             self.prev_reading = None
-            # return self.centered, ['']
+            self.prev_prev_reading = None
+            return self.centered, ['']
+            
+            # # if direction of movement is left, turn right 
+            # if direction == 'L':
+            #     return self.centered, ['r0-1.5']
+            
+            # else:
+            #     return self.centered, ['r0--1.5']
         
+        self.prev_prev_reading = self.prev_reading
         self.prev_reading = sensor_dict['u6']
 
         if direction == 'L':
-            return self.centered, ['r0--1.5']
+            return self.centered, ['r0--1.75']
 
         else: 
-            return self.centered, ['r0-1.5']
+            return self.centered, ['r0-1.75']
     
     def check_clearance_to_block(self, sensor_dict):
         '''
@@ -106,8 +116,11 @@ class BlockDetection():
             
         self.prev_reading = sensor_dict['u6']
         
+        forward_distance = sensor_dict['u6'] - 4.75
+        
         if sensor_dict['u6'] > 4.75: 
-            return self.pick_up_range, ['w0-0.5']
+            # return self.pick_up_range, [f'w0-{forward_distance}']
+            return self.pick_up_range, ['w0-0.6']
         
         elif sensor_dict['u6'] < 4.25:
             return self.pick_up_range, ['w0--0.5']
@@ -169,7 +182,7 @@ class BlockDetection():
         A fine-tuned set of movements to move the arm, drop off the block, and move arm back up.
         '''
         
-        # move back 5 inches to give room, move arm down, open gripper, move back, move arm up
-        return ['w0--5', 'a40', 'go', 'w0--1', 'a180']
+        # move back 5 inches to give room, move arm down, open gripper, move arm up
+        return ['w0--5', 'a40', 'go', 'a180']
     
     # blue, grey, brown, red (top to bot)
