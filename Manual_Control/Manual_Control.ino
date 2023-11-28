@@ -1,7 +1,8 @@
 #include <Wire.h>
 #include <NewPing.h>
 #include <Servo.h>
-#include <Adafruit_VL53L0X.h>
+//#include <Adafruit_VL53L0X.h>
+#include <VL53L0X.h>
 
 //Define pins
 //SoftwareSerial BTSerial(0, 1); // RX | TX -->  0=blue, 1=brown
@@ -31,11 +32,13 @@ NewPing sonar5(TRIGGER_PIN5, ECHO_PIN5, MaxDistance);
 NewPing sonar6(TRIGGER_PIN6, ECHO_PIN6, MaxDistance);
 // NewPing sonar7(TRIGGER_PIN7, ECHO_PIN7, MaxDistance);
 
-Adafruit_VL53L0X tofSensor = Adafruit_VL53L0X();
+VL53L0X tofSensor;
 #define TOF_ADDRESS           0x29  
 #define TOF_SDA               20    // TOF sensor i2c data
 #define TOF_SCL               21    // TOF sensor i2c clock
-VL53L0X_RangingMeasurementData_t measure;
+//// Adafruit
+//Adafruit_VL53L0X tofSensor = Adafruit_VL53L0X();
+//VL53L0X_RangingMeasurementData_t measure;
 
 // LED pins
 int R_LED = 40;
@@ -109,7 +112,13 @@ void setup() {
   // Initialize Serial communication
   Serial.begin(9600);
   // Initialize time of flight sensor i2c
-  tofSensor.begin();
+  Wire.begin();
+  tofSensor.init();
+  tofSensor.setTimeout(50);
+  tofSensor.startContinuous();
+
+//  Adafruit
+//  tofSensor.begin();
   
   //Serial.println("Enter AT commands:");
   // HC-05 default speed in AT command mode 
@@ -321,9 +330,12 @@ int GetAllSensorReadings(float numAvg) {
   }
 
   // TOF sensor
-  tofSensor.rangingTest(&measure, true);
+//  // AdaFruit
+//  tofSensor.rangingTest(&measure, true);
+//  float tof_measurement = measure.RangeMilliMeter/25.4;   // read distance in mm, convert to inches
+
+  float tof_measurement = tofSensor.readRangeContinuousMillimeters()/25.4;
   
-  float tof_measurement = measure.RangeMilliMeter/25.4;   // read distance in mm, convert to inches
   strBuffer += " | 6=";
   strBuffer += tof_measurement;
   
